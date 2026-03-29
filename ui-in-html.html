@@ -1,0 +1,917 @@
+<!-- Export Menu -->
+<!doctype html>
+
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Ekspor Catatan - Buku Catatan Digital</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;500;600&amp;family=EB+Garamond:wght@400;500;600&amp;family=Lora:wght@400;500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#e25532",
+              "background-light": "#f8f6f6",
+              "background-dark": "#211411",
+              terracotta: "#D45B3E",
+              cream: "#F9F6F0",
+              surface: "#F2EBE1",
+              charcoal: "#2B2A27",
+              muted: "#8F8A82",
+              accent: "#E8DCC4",
+              "border-color": "#E0D8C8",
+            },
+            fontFamily: {
+              display: ["Newsreader", "serif"],
+              garamond: ["EB Garamond", "serif"],
+              lora: ["Lora", "serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              md: "0.375rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            boxShadow: {
+              warm: "0 4px 12px rgba(43, 42, 39, 0.08)",
+              "warm-lg": "0 8px 24px rgba(43, 42, 39, 0.12)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Lora", serif;
+        color: #2b2a27;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      .font-display,
+      .font-garamond {
+        font-family: "EB Garamond", serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center p-4"
+  >
+    <!-- Mock Background Content (to show overlay context) -->
+    <div
+      class="fixed inset-0 z-0 overflow-hidden pointer-events-none opacity-30 flex"
+    >
+      <!-- Sidebar Mock -->
+      <div
+        class="w-[260px] h-full bg-surface border-r border-border-color p-4 hidden md:block"
+      >
+        <div class="h-8 w-32 bg-border-color rounded mb-6"></div>
+        <div class="space-y-3">
+          <div class="h-4 w-full bg-border-color rounded"></div>
+          <div class="h-4 w-5/6 bg-border-color rounded"></div>
+          <div class="h-4 w-4/6 bg-border-color rounded"></div>
+        </div>
+      </div>
+      <!-- Main Area Mock -->
+      <div class="flex-1 p-16">
+        <div class="max-w-[800px] mx-auto space-y-6">
+          <div class="h-10 w-2/3 bg-border-color rounded-sm"></div>
+          <div class="space-y-4 mt-8">
+            <div class="h-4 w-full bg-border-color rounded-sm"></div>
+            <div class="h-4 w-full bg-border-color rounded-sm"></div>
+            <div class="h-4 w-5/6 bg-border-color rounded-sm"></div>
+            <div
+              class="h-24 w-full bg-accent/30 rounded border border-border-color flex items-center justify-center"
+            >
+              <div class="h-8 w-1/3 bg-border-color rounded-sm"></div>
+            </div>
+            <div class="h-4 w-full bg-border-color rounded-sm"></div>
+            <div class="h-4 w-4/6 bg-border-color rounded-sm"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Modal Overlay -->
+    <div
+      aria-modal="true"
+      class="fixed inset-0 z-40 bg-[#2B2A27]/40 flex items-center justify-center p-4 transition-opacity"
+      role="dialog"
+    >
+      <!-- Modal Container -->
+      <div
+        class="relative bg-cream rounded-lg shadow-warm-lg w-full max-w-[400px] overflow-hidden flex flex-col transform transition-all"
+      >
+        <!-- Header -->
+        <div
+          class="flex items-center justify-between p-6 pb-4 border-b border-border-color/50"
+        >
+          <h2
+            class="font-garamond text-[24px] font-medium text-charcoal leading-tight"
+          >
+            Ekspor Catatan
+          </h2>
+          <button
+            aria-label="Tutup"
+            class="text-muted hover:text-charcoal transition-colors rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            type="button"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <!-- Content -->
+        <div class="p-6 space-y-6">
+          <!-- Format Selection Grid -->
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Option: PDF (Selected State) -->
+            <label class="relative cursor-pointer group">
+              <input
+                checked=""
+                class="peer sr-only"
+                name="export_format"
+                type="radio"
+                value="pdf"
+              />
+              <div
+                class="h-full flex flex-col items-center justify-center p-4 rounded bg-surface border-2 border-primary shadow-sm transition-all text-center"
+              >
+                <span
+                  class="material-symbols-outlined text-primary text-3xl mb-2"
+                  >picture_as_pdf</span
+                >
+                <span class="font-medium text-charcoal text-sm"
+                  >PDF Document</span
+                >
+                <span class="text-xs text-muted mt-1"
+                  >Sempurna untuk dicetak</span
+                >
+                <!-- Check indicator -->
+                <div
+                  class="absolute top-2 right-2 text-primary opacity-100 transition-opacity"
+                >
+                  <span
+                    class="material-symbols-outlined text-[18px]"
+                    style="font-variation-settings: &quot;FILL&quot; 1"
+                    >check_circle</span
+                  >
+                </div>
+              </div>
+            </label>
+            <!-- Option: PNG (Unselected State) -->
+            <label class="relative cursor-pointer group">
+              <input
+                class="peer sr-only"
+                name="export_format"
+                type="radio"
+                value="png"
+              />
+              <div
+                class="h-full flex flex-col items-center justify-center p-4 rounded bg-surface border-2 border-transparent hover:border-border-color peer-focus-visible:ring-2 peer-focus-visible:ring-primary/50 transition-all text-center"
+              >
+                <span
+                  class="material-symbols-outlined text-muted group-hover:text-charcoal transition-colors text-3xl mb-2"
+                  >image</span
+                >
+                <span class="font-medium text-charcoal text-sm">PNG Image</span>
+                <span class="text-xs text-muted mt-1"
+                  >Baik untuk dibagikan</span
+                >
+                <!-- Check indicator (hidden when unselected) -->
+                <div
+                  class="absolute top-2 right-2 text-primary opacity-0 transition-opacity peer-checked:opacity-100"
+                >
+                  <span
+                    class="material-symbols-outlined text-[18px]"
+                    style="font-variation-settings: &quot;FILL&quot; 1"
+                    >check_circle</span
+                  >
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+        <!-- Footer / Actions -->
+        <div class="p-6 pt-0 mt-2">
+          <button
+            class="w-full bg-primary hover:bg-[#c94b2c] text-cream font-medium py-3 px-4 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-cream flex items-center justify-center gap-2 shadow-sm text-base"
+            type="button"
+          >
+            <span class="material-symbols-outlined text-[20px]">download</span>
+            Ekspor
+          </button>
+          <div class="mt-4 text-center">
+            <button
+              class="text-sm text-muted hover:text-charcoal transition-colors focus:outline-none font-medium"
+              type="button"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+<!-- Document Library with Command Palette -->
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Buku Catatan Digital - Document Library</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&amp;family=Lora:ital,wght@0,400..700;1,400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#D45B3E",
+              "background-light": "#F9F6F0",
+              "background-dark": "#211411",
+              surface: "#F2EBE1",
+              "text-main": "#2B2A27",
+              "text-muted": "#8F8A82",
+              accent: "#E8DCC4",
+              "border-color": "#E0D8C8",
+              "border-warm": "#E0D8C8",
+            },
+            fontFamily: {
+              display: ["'EB Garamond'", "serif"],
+              body: ["'Lora'", "serif"],
+              mono: ["'JetBrains Mono'", "monospace"],
+              headline: ["'EB Garamond'", "serif"],
+              "palette-display": ["Newsreader", "serif"],
+            },
+            borderRadius: {
+              DEFAULT: "4px",
+              lg: "6px",
+              xl: "8px",
+              full: "9999px",
+            },
+            spacing: {
+              base: "8px",
+            },
+            boxShadow: {
+              warm: "0 4px 12px rgba(43, 42, 39, 0.08)",
+              palette: "0 10px 40px -10px rgba(139, 69, 19, 0.12)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Lora", serif;
+        background-color: #f9f6f0;
+        color: #2b2a27;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      .font-display {
+        font-family: "EB Garamond", serif;
+      }
+      .palette-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .palette-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .palette-scroll::-webkit-scrollbar-thumb {
+        background-color: #e0d8c8;
+        border-radius: 4px;
+      }
+      .math-preview {
+        font-family: "EB Garamond", serif;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-main h-screen overflow-hidden flex antialiased"
+  >
+    <!-- Document Library Sidebar -->
+    <aside
+      class="w-[260px] h-full bg-surface border-r border-border-color flex flex-col shrink-0"
+    >
+      <!-- Header -->
+      <div class="p-4 flex flex-col gap-4 border-b border-border-color/50">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div
+              class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8"
+              data-alt="User Avatar Placeholder"
+              style="
+                background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuCNngAK93l_cEf-mnpc1GlgyBBqFwoAtDliF7L33JGBrjbLYvds5QnMA4f5pi-dtwQXLLMgLljf0HhKbMMIt9litwoSdJlg5ppi52Nn8Q-AgRQgYYLRYVsR2a-0arIoqUrpjoAE18bErFxI5I7x6H9zDYyRSCS_-2tTd7Je5_p_uoBY1tr7ISCMDaDGAXDdA-GMkTLTng6JBAqVTBnMdgZaDSZp9e6sCZm26hjvcjksSnJGI8AkL1SgZbbjT90jonVsr8HVr6D7KE4M&quot;);
+              "
+            ></div>
+            <div class="flex flex-col">
+              <h1
+                class="text-text-main text-sm font-display font-medium leading-tight"
+              >
+                Buku Catatan
+              </h1>
+              <p class="text-text-muted text-xs font-normal leading-tight">
+                user@example.com
+              </p>
+            </div>
+          </div>
+          <button
+            aria-label="Collapse Sidebar"
+            class="text-text-muted hover:text-text-main transition-colors duration-200"
+          >
+            <span
+              class="material-symbols-outlined"
+              data-icon="keyboard_double_arrow_left"
+              style="font-size: 20px"
+              >keyboard_double_arrow_left</span
+            >
+          </button>
+        </div>
+        <button
+          class="w-full flex items-center justify-center gap-2 py-2 px-4 border border-primary text-primary font-display font-medium rounded hover:bg-primary/5 transition-colors duration-200"
+        >
+          <span
+            class="material-symbols-outlined"
+            data-icon="add"
+            style="font-size: 18px"
+            >add</span
+          >
+          New Note
+        </button>
+      </div>
+      <!-- Navigation Categories -->
+      <div class="flex-1 overflow-y-auto py-2">
+        <!-- Quick Links -->
+        <div class="px-2 mb-4">
+          <ul class="flex flex-col gap-0.5">
+            <li>
+              <a
+                class="flex items-center gap-3 px-3 py-2 text-text-main rounded hover:bg-accent transition-colors duration-200 text-sm"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-text-muted"
+                  data-icon="house"
+                  style="font-size: 18px"
+                  >house</span
+                >
+                Home
+              </a>
+            </li>
+            <li>
+              <a
+                class="flex items-center gap-3 px-3 py-2 text-text-main rounded hover:bg-accent transition-colors duration-200 text-sm"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-text-muted"
+                  data-icon="book"
+                  style="font-size: 18px"
+                  >book</span
+                >
+                Notebooks
+              </a>
+            </li>
+            <li>
+              <a
+                class="flex items-center gap-3 px-3 py-2 text-text-main rounded hover:bg-accent transition-colors duration-200 text-sm"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-text-muted"
+                  data-icon="function"
+                  style="font-size: 18px"
+                  >function</span
+                >
+                Math Snippets
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div
+          class="px-4 py-2 text-xs font-display text-text-muted tracking-wider uppercase mb-1"
+        >
+          Recent Notes
+        </div>
+        <!-- Notes List -->
+        <div class="px-2 flex flex-col gap-0.5">
+          <!-- Active Note -->
+          <a
+            class="flex flex-col gap-1 px-3 py-2 bg-white rounded shadow-sm translate-x-1 border border-border-color/30 group"
+            href="#"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="material-symbols-outlined text-primary"
+                data-icon="description"
+                style="font-size: 16px"
+                >description</span
+              >
+              <h3
+                class="text-sm font-medium text-text-main truncate group-hover:text-primary transition-colors"
+              >
+                Calculus Notes
+              </h3>
+            </div>
+            <div class="flex justify-between items-center pl-6">
+              <p class="text-xs text-text-muted truncate">
+                Limits and Derivatives
+              </p>
+              <span class="text-[11px] text-text-muted shrink-0">Oct 24</span>
+            </div>
+          </a>
+          <!-- Standard Notes -->
+          <a
+            class="flex flex-col gap-1 px-3 py-2 rounded hover:bg-accent transition-colors duration-200 group"
+            href="#"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="material-symbols-outlined text-text-muted group-hover:text-text-main transition-colors"
+                data-icon="description"
+                style="font-size: 16px"
+                >description</span
+              >
+              <h3
+                class="text-sm text-text-main truncate group-hover:text-text-main transition-colors"
+              >
+                Linear Algebra
+              </h3>
+            </div>
+            <div class="flex justify-between items-center pl-6">
+              <p class="text-xs text-text-muted truncate">
+                Matrix Transformations
+              </p>
+              <span class="text-[11px] text-text-muted shrink-0">Oct 22</span>
+            </div>
+          </a>
+          <a
+            class="flex flex-col gap-1 px-3 py-2 rounded hover:bg-accent transition-colors duration-200 group"
+            href="#"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="material-symbols-outlined text-text-muted group-hover:text-text-main transition-colors"
+                data-icon="description"
+                style="font-size: 16px"
+                >description</span
+              >
+              <h3
+                class="text-sm text-text-main truncate group-hover:text-text-main transition-colors"
+              >
+                Physics Formulas
+              </h3>
+            </div>
+            <div class="flex justify-between items-center pl-6">
+              <p class="text-xs text-text-muted truncate">
+                Kinematics Equations
+              </p>
+              <span class="text-[11px] text-text-muted shrink-0">Oct 18</span>
+            </div>
+          </a>
+          <a
+            class="flex flex-col gap-1 px-3 py-2 rounded hover:bg-accent transition-colors duration-200 group"
+            href="#"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="material-symbols-outlined text-text-muted group-hover:text-text-main transition-colors"
+                data-icon="description"
+                style="font-size: 16px"
+                >description</span
+              >
+              <h3
+                class="text-sm text-text-main truncate group-hover:text-text-main transition-colors"
+              >
+                Thermodynamics
+              </h3>
+            </div>
+            <div class="flex justify-between items-center pl-6">
+              <p class="text-xs text-text-muted truncate">Laws of Thermo</p>
+              <span class="text-[11px] text-text-muted shrink-0">Oct 15</span>
+            </div>
+          </a>
+        </div>
+      </div>
+      <!-- Footer Actions -->
+      <div class="p-2 border-t border-border-color/50 mt-auto">
+        <ul class="flex flex-col gap-0.5">
+          <li>
+            <a
+              class="flex items-center gap-3 px-3 py-2 text-text-main rounded hover:bg-accent transition-colors duration-200 text-sm"
+              href="#"
+            >
+              <span
+                class="material-symbols-outlined text-text-muted"
+                data-icon="settings"
+                style="font-size: 18px"
+                >settings</span
+              >
+              Settings
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-3 px-3 py-2 text-text-main rounded hover:bg-accent transition-colors duration-200 text-sm"
+              href="#"
+            >
+              <span
+                class="material-symbols-outlined text-text-muted"
+                data-icon="delete"
+                style="font-size: 18px"
+                >delete</span
+              >
+              Trash
+            </a>
+          </li>
+        </ul>
+      </div>
+    </aside>
+    <!-- Main Canvas Area -->
+    <main
+      class="flex-1 h-full bg-background-light flex flex-col items-center justify-start pt-16 px-8 relative overflow-y-auto"
+    >
+      <div class="w-full max-w-[800px] flex flex-col gap-8">
+        <h1
+          class="font-headline text-5xl font-medium text-text-main outline-none"
+          contenteditable="true"
+        >
+          Calculus Notes
+        </h1>
+        <div
+          class="font-body text-xl text-text-main leading-[1.8] space-y-8 outline-none"
+          contenteditable="true"
+        >
+          <p>
+            Welcome to your distraction-free workspace. Use the sidebar to
+            navigate or create new notes.
+          </p>
+          <div class="relative inline-block w-full">
+            <span class="inline">Let's start with a basic formula /</span>
+            <!-- Simulated Cursor -->
+            <span
+              class="inline-block w-[2px] h-[1.2em] bg-primary/60 ml-[1px] -mb-1 animate-pulse"
+            ></span>
+            <!-- Command Palette Floating Container (from SCREEN_12) -->
+            <div
+              class="absolute top-[calc(100%+12px)] left-[300px] w-72 bg-surface border border-border-warm rounded-xl shadow-palette flex flex-col overflow-hidden z-50"
+            >
+              <!-- Header -->
+              <div
+                class="p-3 border-b border-border-warm/40 bg-background-light/20"
+              >
+                <span
+                  class="text-[10px] font-sans font-bold uppercase tracking-[0.15em] text-primary/70 px-1"
+                  >Math Commands</span
+                >
+              </div>
+              <!-- Command List -->
+              <div
+                class="palette-scroll overflow-y-auto py-1.5 px-1.5 max-h-[320px]"
+              >
+                <!-- Active/Selected Item -->
+                <div class="relative flex items-center group mb-0.5">
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 bg-accent rounded-lg relative overflow-hidden"
+                  >
+                    <!-- Left Edge Indicator -->
+                    <div
+                      class="absolute left-0 top-0 bottom-0 w-[4px] bg-primary"
+                    ></div>
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-background-light text-text-main shadow-sm border border-border-warm/30"
+                      >
+                        <span class="math-preview text-xl">x/y</span>
+                      </div>
+                      <span
+                        class="font-body font-semibold text-text-main text-[15px]"
+                        >Fraction</span
+                      >
+                    </div>
+                    <div
+                      class="shrink-0 bg-background-light/60 rounded px-2 py-0.5 border border-border-warm/50"
+                    >
+                      <span class="font-mono text-[11px] text-primary/80"
+                        >/frac</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item 1 -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">√</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Square Root</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/sqrt</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item 2 -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">∫</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Integral</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/int</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item 3 -->
+                <div
+                  class="flex items-center justify-between px-1.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-base">lim</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Limit</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/lim</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item: Differential -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-base">dy/dx</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Differential</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/diff</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item: Dot Product -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">⋅</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Dot Product</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/dot</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item: N-th Root -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">ⁿ√</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >N-th Root</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/root</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item: Summation -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">∑</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Summation</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/sum</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item: Pi -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">π</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Pi</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/pi</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Inactive Item: Infinity -->
+                <div
+                  class="flex items-center justify-between px-1.5 mb-0.5 cursor-pointer group"
+                >
+                  <div
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/40 rounded-lg transition-colors"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-9 h-9 rounded flex items-center justify-center bg-border-warm/20 text-text-muted group-hover:bg-accent/60 group-hover:text-text-main transition-colors"
+                      >
+                        <span class="math-preview text-xl">∞</span>
+                      </div>
+                      <span
+                        class="font-body font-medium text-text-main text-[15px]"
+                        >Infinity</span
+                      >
+                    </div>
+                    <div class="shrink-0">
+                      <span
+                        class="font-mono text-[11px] text-text-muted group-hover:text-text-main/80 transition-colors"
+                        >/inf</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Footer helper -->
+              <div
+                class="px-4 py-3 bg-background-light/30 border-t border-border-warm/30 flex justify-between items-center"
+              >
+                <span
+                  class="text-[10px] font-sans text-text-muted uppercase tracking-widest"
+                  >Use arrows to navigate</span
+                >
+                <div class="flex gap-1">
+                  <span
+                    class="w-5 h-5 rounded border border-border-warm text-[10px] flex items-center justify-center text-text-muted font-bold bg-white/40"
+                    >↵</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <p>
+            The derivative of a function measures how the function value changes
+            as its input changes.
+          </p>
+        </div>
+      </div>
+    </main>
+    <!-- Floating UI from SCREEN_12 -->
+    <div class="fixed bottom-10 right-10 flex flex-col gap-5">
+      <button
+        class="w-14 h-14 bg-white rounded-full shadow-lg flex items-center justify-center text-text-muted hover:text-primary transition-all border border-border-warm group"
+      >
+        <span
+          class="material-symbols-outlined group-hover:scale-110 transition-transform"
+          >help_outline</span
+        >
+      </button>
+      <button
+        class="w-16 h-16 bg-primary rounded-full shadow-xl flex items-center justify-center text-white hover:scale-110 transition-transform shadow-primary/20"
+      >
+        <span class="material-symbols-outlined text-3xl">edit</span>
+      </button>
+    </div>
+  </body>
+</html>
