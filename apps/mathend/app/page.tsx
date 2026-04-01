@@ -36,49 +36,49 @@ type NoteActionMenuState = {
   left: number;
 };
 
-const recentNotes: NoteItem[] = [
+const initialNotes: NoteItem[] = [
   {
     id: "n-1",
-    title: "Calculus Notes",
-    subtitle: "Limits and Derivatives",
+    title: "calculus-notes.md",
+    subtitle: "Limits and derivatives",
     category: "Calculus",
     modifiedLabel: "Oct 24",
     modifiedAt: new Date("2026-10-24T10:00:00Z").getTime(),
     content: [
-      "Welcome to your distraction-free workspace. Use the sidebar to navigate or create new notes.\n\nThe derivative of a function measures how the function value changes as its input changes.",
+      "# Limits and Derivatives\n\nThe derivative of a function measures the rate of change.\n\nUse /frac, /sqrt, or /int while typing to quickly insert symbols.",
     ],
   },
   {
     id: "n-2",
-    title: "Linear Algebra",
-    subtitle: "Matrix Transformations",
+    title: "linear-algebra.md",
+    subtitle: "Matrix transformations",
     category: "Algebra",
     modifiedLabel: "Oct 22",
     modifiedAt: new Date("2026-10-22T10:00:00Z").getTime(),
     content: [
-      "Matrices let us describe linear transformations in a compact form.\n\nA basis change can simplify a transformation by diagonalizing the matrix when possible.",
+      "# Matrix Transformations\n\nA matrix can represent scaling, rotation, and projection in compact form.",
     ],
   },
   {
     id: "n-3",
-    title: "Physics Formulas",
-    subtitle: "Kinematics Equations",
+    title: "physics-formulas.md",
+    subtitle: "Kinematics equations",
     category: "Physics",
     modifiedLabel: "Oct 18",
     modifiedAt: new Date("2026-10-18T10:00:00Z").getTime(),
     content: [
-      "Uniform acceleration can be modeled with s = ut + 1/2 at^2.\n\nVector form is useful when splitting motion into x and y components.",
+      "# Kinematics\n\ns = ut + 1/2 at^2\n\nSplit vectors into x and y components for easier solving.",
     ],
   },
   {
     id: "n-4",
-    title: "Thermodynamics",
-    subtitle: "Laws of Thermo",
+    title: "thermodynamics.md",
+    subtitle: "Laws of thermodynamics",
     category: "Thermo",
     modifiedLabel: "Oct 15",
     modifiedAt: new Date("2026-10-15T10:00:00Z").getTime(),
     content: [
-      "The first law states that energy is conserved in closed systems.\n\nEntropy tends to increase for spontaneous processes in isolated systems.",
+      "# Thermodynamics\n\nFirst law: energy is conserved in a closed system.\nSecond law: entropy tends to increase in isolated systems.",
     ],
   },
 ];
@@ -171,6 +171,29 @@ const commands: CommandItem[] = [
   },
 ];
 
+const LONG_PRESS_DURATION_MS = 430;
+
+const STORAGE_NOTES_KEY = "mathend.notes.v1";
+const STORAGE_SELECTED_NOTE_KEY = "mathend.selected-note.v1";
+const STORAGE_SIDEBAR_COLLAPSED_KEY = "mathend.sidebar-collapsed.v1";
+const STORAGE_OPEN_TABS_KEY = "mathend.open-tabs.v1";
+
+const getModifiedLabel = (timestamp: number): string => {
+  const now = Date.now();
+  const diffHours = (now - timestamp) / (1000 * 60 * 60);
+  if (diffHours < 1) {
+    return "Now";
+  }
+  if (diffHours < 24) {
+    return "Today";
+  }
+
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
 const getCaretPositionInTextarea = (
   textarea: HTMLTextAreaElement,
   cursorPosition: number,
@@ -219,28 +242,6 @@ const getCaretPositionInTextarea = (
   return { top, left, height: lineHeight };
 };
 
-const LONG_PRESS_DURATION_MS = 430;
-
-const STORAGE_NOTES_KEY = "mathend.notes.v1";
-const STORAGE_SELECTED_NOTE_KEY = "mathend.selected-note.v1";
-const STORAGE_SIDEBAR_COLLAPSED_KEY = "mathend.sidebar-collapsed.v1";
-
-const getModifiedLabel = (timestamp: number): string => {
-  const now = Date.now();
-  const diffHours = (now - timestamp) / (1000 * 60 * 60);
-  if (diffHours < 1) {
-    return "Now";
-  }
-  if (diffHours < 24) {
-    return "Today";
-  }
-
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-};
-
 export default function Home() {
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const paletteListRef = useRef<HTMLDivElement | null>(null);
@@ -252,9 +253,12 @@ export default function Home() {
   const didInitPersistRef = useRef(false);
   const suppressAutoSaveToastRef = useRef(false);
 
-  const [notes, setNotes] = useState<NoteItem[]>(recentNotes);
+  const [notes, setNotes] = useState<NoteItem[]>(initialNotes);
   const [selectedNoteId, setSelectedNoteId] = useState(
-    recentNotes[0]?.id ?? "",
+    initialNotes[0]?.id ?? "",
+  );
+  const [openTabIds, setOpenTabIds] = useState<string[]>(
+    initialNotes.slice(0, 2).map((note) => note.id),
   );
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -288,6 +292,14 @@ export default function Home() {
 
   const selectedNoteContent = selectedNote?.content.join("\n\n") ?? "";
 
+  const openTabs = useMemo(
+    () =>
+      openTabIds
+        .map((id) => notes.find((note) => note.id === id))
+        .filter((note): note is NoteItem => Boolean(note)),
+    [notes, openTabIds],
+  );
+
   const filteredCommands = useMemo(() => {
     const query = paletteQuery.trim().toLowerCase();
     if (!query) {
@@ -306,14 +318,6 @@ export default function Home() {
       return true;
     }
     return window.matchMedia("(min-width: 981px)").matches;
-  }, []);
-
-  const openExportModal = useCallback(() => {
-    setIsExportOpen(true);
-  }, []);
-
-  const closeExportModal = useCallback(() => {
-    setIsExportOpen(false);
   }, []);
 
   const closeNoteActionMenu = useCallback(() => {
@@ -357,11 +361,51 @@ export default function Home() {
     [clearNoteLongPress, openNoteActionMenu],
   );
 
-  const selectNote = useCallback((noteId: string) => {
-    setSelectedNoteId(noteId);
-    setIsSidebarOpenMobile(false);
-    setNoteActionMenu(null);
+  const openNoteInTab = useCallback((noteId: string) => {
+    setOpenTabIds((previous) => {
+      if (previous.includes(noteId)) {
+        return previous;
+      }
+      return [...previous, noteId];
+    });
   }, []);
+
+  const selectNote = useCallback(
+    (noteId: string) => {
+      openNoteInTab(noteId);
+      setSelectedNoteId(noteId);
+      setIsSidebarOpenMobile(false);
+      setNoteActionMenu(null);
+    },
+    [openNoteInTab],
+  );
+
+  const closeTab = useCallback(
+    (noteId: string) => {
+      setOpenTabIds((previous) => {
+        const index = previous.indexOf(noteId);
+        if (index === -1) {
+          return previous;
+        }
+        const next = previous.filter((id) => id !== noteId);
+
+        if (selectedNoteId === noteId) {
+          const fallbackVisible = visibleNotes.find(
+            (note) => note.id !== noteId,
+          )?.id;
+          const nextActiveId =
+            next[index] ?? next[index - 1] ?? fallbackVisible ?? "";
+          setSelectedNoteId(nextActiveId);
+          if (nextActiveId) {
+            openNoteInTab(nextActiveId);
+          }
+        }
+
+        return next;
+      });
+    },
+    [openNoteInTab, selectedNoteId, visibleNotes],
+  );
 
   const handleDeleteNote = useCallback(
     (noteId: string) => {
@@ -377,28 +421,31 @@ export default function Home() {
       setNoteActionMenu(null);
       setNotes((previous) => {
         const next = previous.filter((note) => note.id !== noteId);
+        const fallbackId = next[0]?.id ?? "";
         const stillHasSelected = next.some(
           (note) => note.id === selectedNoteId,
         );
 
+        setOpenTabIds((open) => open.filter((id) => id !== noteId));
+
         if (!stillHasSelected) {
-          setSelectedNoteId(next[0]?.id ?? "");
+          setSelectedNoteId(fallbackId);
+          if (fallbackId) {
+            openNoteInTab(fallbackId);
+          }
         }
 
         return next;
       });
     },
-    [notes, selectedNoteId],
+    [notes, openNoteInTab, selectedNoteId],
   );
 
-  const handleExportNote = useCallback(
-    (noteId: string) => {
-      setSelectedNoteId(noteId);
-      setNoteActionMenu(null);
-      openExportModal();
-    },
-    [openExportModal],
-  );
+  const handleExportNote = useCallback((noteId: string) => {
+    setSelectedNoteId(noteId);
+    setNoteActionMenu(null);
+    setIsExportOpen(true);
+  }, []);
 
   const updateSelectedNote = useCallback(
     (updater: (note: NoteItem) => NoteItem) => {
@@ -511,7 +558,7 @@ export default function Home() {
       updateSelectedNote((note) => ({
         ...note,
         content: [nextValue],
-        subtitle: nextValue.slice(0, 38),
+        subtitle: nextValue.slice(0, 42),
       }));
 
       setPaletteQuery("");
@@ -533,7 +580,7 @@ export default function Home() {
       updateSelectedNote((note) => ({
         ...note,
         content: [nextValue],
-        subtitle: nextValue.slice(0, 38),
+        subtitle: nextValue.slice(0, 42),
       }));
       evaluateSlashTrigger(nextValue, cursorPosition);
     },
@@ -557,15 +604,21 @@ export default function Home() {
     const timestamp = Date.now();
     const newNote: NoteItem = {
       id: `n-${timestamp}`,
-      title: "Untitled Note",
-      subtitle: "Quick draft",
+      title: "untitled.md",
+      subtitle: "Start writing your note",
       category: "Calculus",
       modifiedLabel: "Now",
       modifiedAt: timestamp,
-      content: ["Start writing your new note here."],
+      content: ["# Untitled\n\nStart writing your note here."],
     };
 
     setNotes((previous) => [newNote, ...previous]);
+    setOpenTabIds((previous) => {
+      if (previous.includes(newNote.id)) {
+        return previous;
+      }
+      return [...previous, newNote.id];
+    });
     setSelectedNoteId(newNote.id);
     setNoteActionMenu(null);
     setIsSidebarOpenMobile(false);
@@ -580,6 +633,7 @@ export default function Home() {
       const rawSidebarCollapsed = window.localStorage.getItem(
         STORAGE_SIDEBAR_COLLAPSED_KEY,
       );
+      const rawOpenTabs = window.localStorage.getItem(STORAGE_OPEN_TABS_KEY);
 
       if (rawNotes) {
         const parsed = JSON.parse(rawNotes) as unknown;
@@ -602,8 +656,7 @@ export default function Home() {
           if (validNotes.length === parsed.length) {
             setNotes(validNotes);
             if (!rawSelectedNote) {
-              const firstNote = validNotes.at(0);
-              setSelectedNoteId(firstNote?.id ?? "");
+              setSelectedNoteId(validNotes[0]?.id ?? "");
             }
           }
         }
@@ -616,12 +669,51 @@ export default function Home() {
       if (rawSidebarCollapsed === "true") {
         setIsSidebarCollapsed(true);
       }
+
+      if (rawOpenTabs) {
+        const parsedTabs = JSON.parse(rawOpenTabs) as unknown;
+        if (
+          Array.isArray(parsedTabs) &&
+          parsedTabs.every((id) => typeof id === "string")
+        ) {
+          setOpenTabIds(parsedTabs);
+        }
+      }
     } catch {
-      setNotes(recentNotes);
+      setNotes(initialNotes);
+      setOpenTabIds(initialNotes.slice(0, 2).map((note) => note.id));
     } finally {
       setIsHydratedFromStorage(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!selectedNoteId || notes.length === 0) {
+      return;
+    }
+
+    const exists = notes.some((note) => note.id === selectedNoteId);
+    if (!exists) {
+      setSelectedNoteId(notes[0]?.id ?? "");
+    }
+  }, [notes, selectedNoteId]);
+
+  useEffect(() => {
+    const noteIds = new Set(notes.map((note) => note.id));
+    setOpenTabIds((previous) => {
+      const filtered = previous.filter((id) => noteIds.has(id));
+      if (filtered.length > 0) {
+        return filtered;
+      }
+      const fallback =
+        selectedNoteId && noteIds.has(selectedNoteId)
+          ? [selectedNoteId]
+          : notes[0]?.id
+            ? [notes[0].id]
+            : [];
+      return fallback;
+    });
+  }, [notes, selectedNoteId]);
 
   useEffect(() => {
     if (!isHydratedFromStorage) {
@@ -639,6 +731,10 @@ export default function Home() {
       STORAGE_SIDEBAR_COLLAPSED_KEY,
       isSidebarCollapsed ? "true" : "false",
     );
+    window.localStorage.setItem(
+      STORAGE_OPEN_TABS_KEY,
+      JSON.stringify(openTabIds),
+    );
 
     if (!suppressAutoSaveToastRef.current) {
       setSaveToastMessage("Auto-saved");
@@ -652,7 +748,13 @@ export default function Home() {
     } else {
       suppressAutoSaveToastRef.current = false;
     }
-  }, [isHydratedFromStorage, isSidebarCollapsed, notes, selectedNoteId]);
+  }, [
+    isHydratedFromStorage,
+    isSidebarCollapsed,
+    notes,
+    openTabIds,
+    selectedNoteId,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -803,19 +905,6 @@ export default function Home() {
     };
   }, [filteredCommands.length, isPaletteOpen, paletteIndex]);
 
-  useEffect(() => {
-    if (!selectedNote) {
-      return;
-    }
-
-    const noteStillVisible = visibleNotes.some(
-      (note) => note.id === selectedNote.id,
-    );
-    if (!noteStillVisible && visibleNotes[0]) {
-      setSelectedNoteId(visibleNotes[0].id);
-    }
-  }, [selectedNote, visibleNotes]);
-
   return (
     <div
       className={`library-app-shell ${isSidebarOpenMobile ? "sidebar-open-mobile" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}
@@ -835,7 +924,7 @@ export default function Home() {
             className="icon-action sidebar-shrink-toggle"
             onClick={toggleSidebarMode}
           >
-            {isSidebarCollapsed ? "››" : "‹‹"}
+            {isSidebarCollapsed ? ">>" : "<<"}
           </button>
           <button
             type="button"
@@ -843,11 +932,12 @@ export default function Home() {
             onClick={createNewNote}
           >
             <span aria-hidden>+</span>
-            New Note
+            New File
           </button>
         </div>
 
         <div className="sidebar-content">
+          <div className="recent-label">Openable Notes</div>
           <div className="notes-list">
             {visibleNotes.map((note) => (
               <button
@@ -890,7 +980,7 @@ export default function Home() {
               >
                 <div className="note-row">
                   <span className="note-icon" aria-hidden>
-                    •
+                    .
                   </span>
                   <h2 className="note-title">{note.title}</h2>
                 </div>
@@ -902,7 +992,7 @@ export default function Home() {
             ))}
 
             {visibleNotes.length === 0 && (
-              <div className="no-note-state">No notes yet. Create one now.</div>
+              <div className="no-note-state">No file yet. Create one now.</div>
             )}
           </div>
         </div>
@@ -911,6 +1001,40 @@ export default function Home() {
 
       <main className="editor-canvas">
         <div className="editor-wrap">
+          <div className="editor-tabs" role="tablist" aria-label="Open files">
+            {openTabs.map((note) => {
+              if (!note) {
+                return null;
+              }
+
+              const isActive = note.id === selectedNote?.id;
+              return (
+                <button
+                  key={note.id}
+                  type="button"
+                  className={
+                    isActive ? "editor-tab editor-tab-active" : "editor-tab"
+                  }
+                  onClick={() => selectNote(note.id)}
+                  role="tab"
+                  aria-selected={isActive}
+                >
+                  <span className="editor-tab-name">{note.title}</span>
+                  <span
+                    className="editor-tab-close"
+                    aria-label={`Close ${note.title}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      closeTab(note.id);
+                    }}
+                  >
+                    x
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="editor-heading-row">
             <div className="editor-title-group">
               <button
@@ -918,7 +1042,7 @@ export default function Home() {
                 className="mobile-sidebar-toggle"
                 onClick={() => setIsSidebarOpenMobile((value) => !value)}
               >
-                Notes
+                Files
               </button>
               <h2
                 key={selectedNote?.id ?? "empty-title"}
@@ -929,13 +1053,13 @@ export default function Home() {
                   const nextTitle = event.currentTarget.textContent?.trim();
                   if (!nextTitle || nextTitle === selectedNote?.title) {
                     event.currentTarget.textContent =
-                      selectedNote?.title ?? "Document Library";
+                      selectedNote?.title ?? "workspace.md";
                     return;
                   }
                   updateSelectedNote((note) => ({ ...note, title: nextTitle }));
                 }}
               >
-                {selectedNote?.title ?? "Document Library"}
+                {selectedNote?.title ?? "workspace.md"}
               </h2>
             </div>
           </div>
@@ -1117,7 +1241,7 @@ export default function Home() {
 
       <ExportModal
         isOpen={isExportOpen}
-        onClose={closeExportModal}
+        onClose={() => setIsExportOpen(false)}
         onExport={handleExport}
       />
     </div>

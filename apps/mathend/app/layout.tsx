@@ -1,29 +1,28 @@
 import type { Metadata } from "next";
-import { EB_Garamond, JetBrains_Mono, Lora } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
-const lora = Lora({
+const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],
 });
 
-const ebGaramond = EB_Garamond({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
   weight: ["400", "500", "600", "700"],
 });
 
-const jetBrainsMono = JetBrains_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
-  title: "Buku Catatan Digital",
-  description:
-    "Document library interface with natural and warm visual language.",
+  title: "Mathend Workspace",
+  description: "IDE-like workspace for managing and writing notes.",
 };
 
 export default function RootLayout({
@@ -34,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${lora.variable} ${ebGaramond.variable} ${jetBrainsMono.variable}`}
+        className={`${ibmPlexSans.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable}`}
       >
         {children}
       </body>
