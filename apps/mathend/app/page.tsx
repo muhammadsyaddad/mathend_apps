@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExportModal, type ExportFormat } from "./components/export-modal";
+import SettingsTrigger from "./components/setting-triger";
 
 type NoteItem = {
   id: string;
@@ -906,15 +906,7 @@ export default function Home() {
             )}
           </div>
         </div>
-
-        <div className="sidebar-footer">
-          <Link href="/settings" className="nav-item settings-link">
-            <span className="nav-icon" aria-hidden>
-              ⚙
-            </span>
-            <span className="nav-item-label">Settings</span>
-          </Link>
-        </div>
+        <SettingsTrigger />
       </aside>
 
       <main className="editor-canvas">

@@ -1,15 +1,15 @@
 :root {
-  --background-light: #f9f6f0;
-  --surface: #f2ebe1;
-  --surface-contrast: #ffffff;
-  --text-main: #2b2a27;
-  --text-muted: #8f8a82;
-  --primary: #d45b3e;
-  --primary-strong: #b9472d;
-  --accent: #e8dcc4;
-  --border: #e0d8c8;
-  --shadow-sm: 0 4px 12px rgba(43, 42, 39, 0.08);
-  --shadow-lg: 0 18px 40px rgba(117, 89, 49, 0.14);
+  --background-light: #f6f0e4;
+  --surface: #efe4d2;
+  --surface-contrast: #fffdf7;
+  --text-main: #2f2921;
+  --text-muted: #7f7568;
+  --primary: #b6643f;
+  --primary-strong: #8f4a2c;
+  --accent: #e7d9c0;
+  --border: #dccdb5;
+  --shadow-sm: 0 4px 12px rgba(47, 41, 33, 0.08);
+  --shadow-lg: 0 20px 42px rgba(92, 69, 39, 0.16);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -41,7 +41,7 @@ body {
       transparent 42%
     ),
     var(--background-light);
-  font-family: var(--font-body), Georgia, serif;
+  font-family: var(--font-body), "Palatino Linotype", Palatino, serif;
 }
 
 a {
@@ -299,6 +299,8 @@ a {
   align-items: center;
   gap: 0.65rem;
   font-size: 0.9rem;
+  font-family: var(--font-display), "Baskerville", serif;
+  font-weight: 500;
   padding: 0.45rem 0.7rem;
   transition: background-color 0.2s ease;
 }
@@ -410,10 +412,30 @@ a {
 
 .settings-link {
   width: 100%;
+  border: 1px solid rgba(182, 100, 63, 0.18);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 253, 247, 0.7),
+    rgba(239, 228, 210, 0.45)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.settings-link .nav-icon {
+  color: var(--primary);
+}
+
+.settings-link:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 253, 247, 0.92),
+    rgba(231, 217, 192, 0.8)
+  );
 }
 
 .sidebar-collapsed .settings-link {
   width: 2.5rem;
+  justify-content: center;
 }
 
 .no-note-state {
@@ -527,29 +549,27 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  font-family: var(--font-body), "Palatino Linotype", Palatino, serif;
 }
 
 .note-editor-textarea {
   width: 100%;
   min-height: 22rem;
   resize: vertical;
-  border: 1px solid rgba(224, 216, 200, 0.78);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.74);
-  padding: 1.15rem 1.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   color: var(--text-main);
-  font-family: var(--font-body), Georgia, serif;
+  font-family: var(--font-body), "Palatino Linotype", Palatino, serif;
   font-size: clamp(1rem, 2vw, 1.12rem);
   line-height: 1.75;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   outline: 0;
 }
 
 .note-editor-textarea:focus {
-  border-color: rgba(212, 91, 62, 0.45);
-  box-shadow:
-    var(--shadow-sm),
-    0 0 0 3px rgba(212, 91, 62, 0.15);
+  box-shadow: none;
 }
 
 .palette-anchor {
@@ -998,39 +1018,94 @@ a {
   color: var(--text-main);
 }
 
-.settings-page {
-  min-height: 100vh;
+.settings-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: 1rem;
+}
+
+.settings-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(47, 41, 33, 0.44);
+}
+
+.settings-modal-overlay-enter .settings-modal-backdrop {
+  animation: fade-in 180ms ease-out forwards;
+}
+
+.settings-modal-overlay-exit .settings-modal-backdrop {
+  animation: fade-out 180ms ease-out forwards;
 }
 
 .settings-panel {
-  width: min(42rem, 100%);
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+  width: min(34rem, 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 253, 247, 0.96),
+    rgba(245, 236, 221, 0.96)
+  );
+  border: 1px solid rgba(143, 74, 44, 0.18);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 1.5rem;
+  padding: 1.2rem;
+}
+
+.settings-panel-enter {
+  animation: modal-in 180ms ease-out forwards;
+}
+
+.settings-panel-exit {
+  animation: modal-out 180ms ease-out forwards;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.2rem;
 }
 
 .settings-title {
-  font-family: var(--font-display), "Times New Roman", serif;
-  font-size: clamp(1.8rem, 4vw, 2.3rem);
-  margin-bottom: 0.35rem;
+  font-family: var(--font-display), "Baskerville", serif;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+.settings-close {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-close:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .settings-subtitle {
   color: var(--text-muted);
-  margin-bottom: 1.2rem;
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
 }
 
 .settings-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.2rem;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
 }
 
 .settings-row {
@@ -1038,34 +1113,35 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border: 1px solid rgba(224, 216, 200, 0.72);
+  border: 1px solid rgba(143, 74, 44, 0.14);
   border-radius: var(--radius-md);
   padding: 0.7rem 0.8rem;
-  background: rgba(242, 235, 225, 0.45);
+  background: rgba(255, 253, 247, 0.7);
 }
 
 .settings-label {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .settings-value {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
-.settings-back-link {
-  display: inline-flex;
-  min-height: 2.3rem;
-  align-items: center;
-  justify-content: center;
+.settings-dismiss {
+  width: 100%;
   border: 1px solid var(--primary);
   color: var(--primary);
+  background: transparent;
   border-radius: var(--radius-sm);
-  padding: 0 0.9rem;
+  min-height: 2.5rem;
+  font-family: var(--font-display), "Baskerville", serif;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
-.settings-back-link:hover {
-  background: rgba(212, 91, 62, 0.08);
+.settings-dismiss:hover {
+  background: rgba(182, 100, 63, 0.08);
 }
 
 @media (max-width: 980px) {

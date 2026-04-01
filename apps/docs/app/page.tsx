@@ -15,7 +15,7 @@ const ThemeImage = (props: Props) => {
       <Image {...rest} src={srcLight} className="imgLight" />
       <Image {...rest} src={srcDark} className="imgDark" />
     </>
-  );
+  ); 
 };
 
 export default function Home() {
