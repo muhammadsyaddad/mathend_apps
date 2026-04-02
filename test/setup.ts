@@ -13,10 +13,42 @@ const matchMediaMock = vi.fn((query: string) => ({
   dispatchEvent: vi.fn(),
 }));
 
+const ensureLocalStorage = () => {
+  if (typeof window.localStorage?.clear === "function") {
+    return;
+  }
+
+  const store = new Map<string, string>();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    writable: true,
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
+      key: (index: number) => {
+        return Array.from(store.keys())[index] ?? null;
+      },
+      get length() {
+        return store.size;
+      },
+    } satisfies Storage,
+  });
+};
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: matchMediaMock,
 });
+
+ensureLocalStorage();
 
 if (!window.requestAnimationFrame) {
   window.requestAnimationFrame = (callback: FrameRequestCallback) => {
@@ -31,6 +63,7 @@ if (!window.cancelAnimationFrame) {
 }
 
 beforeEach(() => {
+  ensureLocalStorage();
   window.localStorage.clear();
   window.alert = vi.fn();
 });

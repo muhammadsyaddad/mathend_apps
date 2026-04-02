@@ -1,0 +1,38 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  getOAuthProviderRuntimeConfig,
+  isOAuthProviderConfigured,
+} from "../../../apps/mathend/app/lib/oauth-provider-runtime";
+
+const resetGithubOauthEnv = () => {
+  delete process.env.MATHEND_GITHUB_COPILOT_CLIENT_ID;
+  delete process.env.MATHEND_GITHUB_COPILOT_CLIENT_SECRET;
+  delete process.env.MATHEND_GITHUB_COPILOT_AUTH_URL;
+  delete process.env.MATHEND_GITHUB_COPILOT_TOKEN_URL;
+  delete process.env.MATHEND_GITHUB_COPILOT_DEVICE_CODE_URL;
+};
+
+describe("oauth-provider-runtime github-copilot", () => {
+  afterEach(() => {
+    resetGithubOauthEnv();
+  });
+
+  it("considers github configured for device flow without client secret", () => {
+    resetGithubOauthEnv();
+    process.env.MATHEND_GITHUB_COPILOT_CLIENT_ID = "github-client-id";
+
+    const config = getOAuthProviderRuntimeConfig("github-copilot");
+
+    expect(config.deviceCodeUrl).toBe("https://github.com/login/device/code");
+    expect(config.clientSecret).toBe("");
+    expect(isOAuthProviderConfigured(config)).toBe(true);
+  });
+
+  it("returns not configured when github client id is missing", () => {
+    resetGithubOauthEnv();
+
+    const config = getOAuthProviderRuntimeConfig("github-copilot");
+
+    expect(isOAuthProviderConfigured(config)).toBe(false);
+  });
+});
