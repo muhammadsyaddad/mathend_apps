@@ -42,7 +42,7 @@ export const parseOAuthConnections = (
         typeof candidate.providerLabel !== "string" ||
         typeof candidate.accountLabel !== "string" ||
         typeof candidate.connectedAt !== "string" ||
-        (candidate.mode !== "mock" && candidate.mode !== "oauth")
+        candidate.mode !== "oauth"
       ) {
         continue;
       }

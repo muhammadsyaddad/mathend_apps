@@ -182,12 +182,9 @@ export async function POST(request: Request) {
   }
 
   const state = randomBase64Url(24);
-  let codeVerifier: string | undefined;
-  let codeChallenge: string | undefined;
-
   const pkcePair = await createPkcePair();
-  codeVerifier = pkcePair.codeVerifier;
-  codeChallenge = pkcePair.codeChallenge;
+  const codeVerifier = pkcePair.codeVerifier;
+  const codeChallenge = pkcePair.codeChallenge;
 
   const payload: OAuthStatePayload = {
     providerId,
@@ -226,6 +223,3 @@ export async function POST(request: Request) {
 
   return response;
 }
-
-
-

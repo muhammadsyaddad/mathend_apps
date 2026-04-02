@@ -10,9 +10,8 @@ Folder ini dipakai sebagai gate kualitas sebelum push ke GitHub.
 
 ## Cakupan sekarang
 
-- `test/packages/ui`: unit test untuk `Button`, `Card`, `Code`
-- `test/apps/mathend`: flow test utama untuk halaman library dan modal export
-- `test/apps/docs`: trust check untuk behavior shared button
+- `test/mathend`: flow test utama untuk halaman library dan modal export
+- `test/docs`: trust check untuk behavior shared button
 
 ## Cara jalanin
 

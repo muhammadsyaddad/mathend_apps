@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   getOAuthProviderRuntimeConfig,
   isOAuthProviderConfigured,
-} from "../../../apps/mathend/app/lib/oauth-provider-runtime";
+} from "../../apps/mathend/app/lib/oauth-provider-runtime";
 
 const resetGithubOauthEnv = () => {
   delete process.env.MATHEND_GITHUB_COPILOT_CLIENT_ID;

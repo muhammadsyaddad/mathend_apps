@@ -5,7 +5,6 @@ Mathend adalah workspace catatan matematis dengan **Agent Panel** yang sekarang 
 - OAuth provider untuk `Codex GitHub Copilot`
 - OAuth provider untuk `Claude Code AI`
 - Chat panel berbasis provider yang terhubung
-- Fallback `Connect Demo` untuk local testing jika env OAuth belum diisi
 
 ## Jalankan lokal
 
@@ -63,9 +62,8 @@ Daftarkan URL callback ini pada OAuth app provider terkait.
 - `POST /api/oauth/connect` -> mulai OAuth flow (GitHub return device code, provider lain return authorize URL)
 - `POST /api/oauth/device/poll` -> polling status device code sampai GitHub login selesai
 - `GET /api/oauth/callback/[providerId]` -> callback + token exchange
-- `POST /api/oauth/mock-connect` -> connect demo account (untuk local dev)
 - `POST /api/oauth/disconnect` -> putuskan koneksi provider
-- `POST /api/agent/chat` -> kirim message ke agent panel (live jika endpoint tersedia, fallback ke mock)
+- `POST /api/agent/chat` -> kirim message ke agent panel (provider live jika endpoint tersedia)
 
 ## Verifikasi
 

@@ -6,7 +6,25 @@ import SettingsModal from "./ui/setting-modal";
 import AccountTrigger from "./ui/account-trigger";
 import AgentPanel from "./ui/agent-panel";
 
-export default function SettingsTrigger() {
+type AgentActiveFile = {
+  id: string;
+  title: string;
+  content: string;
+};
+
+type SettingsTriggerProps = {
+  activeFile: AgentActiveFile | null;
+  onOverwriteActiveFile: (nextContent: string) => boolean;
+  onAppendToActiveFile: (appendContent: string) => boolean;
+  onReplaceInActiveFile: (find: string, replaceWith: string) => number;
+};
+
+export default function SettingsTrigger({
+  activeFile,
+  onOverwriteActiveFile,
+  onAppendToActiveFile,
+  onReplaceInActiveFile,
+}: SettingsTriggerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
 
@@ -45,6 +63,10 @@ export default function SettingsTrigger() {
       <AgentPanel
         isOpen={isAgentPanelOpen}
         onClose={() => setIsAgentPanelOpen(false)}
+        activeFile={activeFile}
+        onOverwriteActiveFile={onOverwriteActiveFile}
+        onAppendToActiveFile={onAppendToActiveFile}
+        onReplaceInActiveFile={onReplaceInActiveFile}
       />
     </div>
   );

@@ -20,6 +20,16 @@ import { createPortal } from "react-dom";
 type AgentPanelProps = {
   isOpen: boolean;
   onClose: () => void;
+  activeFile: AgentWorkspaceFile | null;
+  onOverwriteActiveFile: (nextContent: string) => boolean;
+  onAppendToActiveFile: (appendContent: string) => boolean;
+  onReplaceInActiveFile: (find: string, replaceWith: string) => number;
+};
+
+type AgentWorkspaceFile = {
+  id: string;
+  title: string;
+  content: string;
 };
 
 type ProviderConnection = {
@@ -27,7 +37,7 @@ type ProviderConnection = {
   providerLabel: string;
   accountLabel: string;
   connectedAt: string;
-  mode: "mock" | "oauth";
+  mode: "oauth";
 };
 
 type AgentProvider = {
@@ -73,6 +83,109 @@ type AgentChatMessage = {
   content: string;
 };
 
+type WorkspaceCommand =
+  | {
+      kind: "read";
+    }
+  | {
+      kind: "write";
+      content: string;
+    }
+  | {
+      kind: "append";
+      content: string;
+    }
+  | {
+      kind: "replace";
+      find: string;
+      replaceWith: string;
+    }
+  | {
+      kind: "help";
+    };
+
+const WORKSPACE_TOOL_LABEL = "Workspace Tool";
+const FALLBACK_FILE_SESSION_ID = "__no_file__";
+const EMPTY_SESSION_MESSAGES: AgentChatMessage[] = [];
+
+const parseWorkspaceCommand = (input: string): WorkspaceCommand | null => {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^\/(help|tools|commands)$/i.test(trimmed)) {
+    return { kind: "help" };
+  }
+
+  if (/^\/(read|cat)\b/i.test(trimmed)) {
+    return { kind: "read" };
+  }
+
+  const writeMatch = trimmed.match(/^\/write\s+([\s\S]+)$/i);
+  if (writeMatch) {
+    return {
+      kind: "write",
+      content: writeMatch[1] ?? "",
+    };
+  }
+
+  const appendMatch = trimmed.match(/^\/append\s+([\s\S]+)$/i);
+  if (appendMatch) {
+    return {
+      kind: "append",
+      content: appendMatch[1] ?? "",
+    };
+  }
+
+  const quotedDoubleReplaceMatch = trimmed.match(
+    /^\/replace\s+"([\s\S]+)"\s+"([\s\S]*)"$/i,
+  );
+  if (quotedDoubleReplaceMatch) {
+    return {
+      kind: "replace",
+      find: quotedDoubleReplaceMatch[1] ?? "",
+      replaceWith: quotedDoubleReplaceMatch[2] ?? "",
+    };
+  }
+
+  const quotedSingleReplaceMatch = trimmed.match(
+    /^\/replace\s+'([\s\S]+)'\s+'([\s\S]*)'$/i,
+  );
+  if (quotedSingleReplaceMatch) {
+    return {
+      kind: "replace",
+      find: quotedSingleReplaceMatch[1] ?? "",
+      replaceWith: quotedSingleReplaceMatch[2] ?? "",
+    };
+  }
+
+  const arrowReplaceMatch = trimmed.match(
+    /^\/replace\s+([\s\S]+?)\s*=>\s*([\s\S]*)$/i,
+  );
+  if (arrowReplaceMatch) {
+    const find = arrowReplaceMatch[1]?.trim() ?? "";
+    return {
+      kind: "replace",
+      find,
+      replaceWith: arrowReplaceMatch[2] ?? "",
+    };
+  }
+
+  return null;
+};
+
+const getWorkspaceHelpText = (): string => {
+  return [
+    "Workspace commands:",
+    "/read - show active file content",
+    "/write <content> - replace active file with content",
+    "/append <content> - append content at the end",
+    "/replace <find> => <replace> - replace all matches",
+    '/replace "find text" "replace text" - quoted variant',
+  ].join("\n");
+};
+
 const GITHUB_MODEL_OPTIONS = [
   {
     label: "GPT-4o mini",
@@ -111,7 +224,14 @@ const formatConnectedAt = (iso: string): string => {
   })}`;
 };
 
-export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
+export default function AgentPanel({
+  isOpen,
+  onClose,
+  activeFile,
+  onOverwriteActiveFile,
+  onAppendToActiveFile,
+  onReplaceInActiveFile,
+}: AgentPanelProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [providers, setProviders] = useState<AgentProvider[]>([]);
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
@@ -121,8 +241,12 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
     null,
   );
-  const [messages, setMessages] = useState<AgentChatMessage[]>([]);
-  const [draftMessage, setDraftMessage] = useState("");
+  const [messagesBySession, setMessagesBySession] = useState<
+    Record<string, AgentChatMessage[]>
+  >({});
+  const [draftBySession, setDraftBySession] = useState<Record<string, string>>(
+    {},
+  );
   const [chatError, setChatError] = useState<string | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
@@ -134,6 +258,30 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const providerMenuRef = useRef<HTMLDivElement | null>(null);
   const devicePollTimerRef = useRef<number | null>(null);
+
+  const currentSessionId = activeFile?.id ?? FALLBACK_FILE_SESSION_ID;
+  const messages = useMemo(
+    () => messagesBySession[currentSessionId] ?? EMPTY_SESSION_MESSAGES,
+    [currentSessionId, messagesBySession],
+  );
+  const draftMessage = draftBySession[currentSessionId] ?? "";
+
+  const appendSessionMessage = useCallback(
+    (sessionId: string, message: AgentChatMessage) => {
+      setMessagesBySession((previous) => ({
+        ...previous,
+        [sessionId]: [...(previous[sessionId] ?? []), message],
+      }));
+    },
+    [],
+  );
+
+  const setDraftForSession = useCallback((sessionId: string, value: string) => {
+    setDraftBySession((previous) => ({
+      ...previous,
+      [sessionId]: value,
+    }));
+  }, []);
 
   const clearDevicePollTimer = useCallback(() => {
     if (devicePollTimerRef.current === null) {
@@ -438,35 +586,6 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
     }
   };
 
-  const connectViaMock = async (providerId: string) => {
-    setChatError(null);
-    setProvidersError(null);
-    setPendingDeviceAuth(null);
-    clearDevicePollTimer();
-    setIsActionPending(true);
-    try {
-      const response = await fetch("/api/oauth/mock-connect", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ providerId }),
-      });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to connect demo account.");
-      }
-      await loadProviders();
-      setOauthNotice("Demo OAuth connected for local testing.");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed demo OAuth connect.";
-      setProvidersError(message);
-    } finally {
-      setIsActionPending(false);
-    }
-  };
-
   const disconnectProvider = async (providerId: string) => {
     setChatError(null);
     setProvidersError(null);
@@ -498,6 +617,85 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
   };
 
   const sendMessage = async () => {
+    const sessionId = currentSessionId;
+    const sessionMessages = messagesBySession[sessionId] ?? [];
+
+    const content = draftMessage.trim();
+    if (!content) {
+      return;
+    }
+
+    const workspaceCommand = parseWorkspaceCommand(content);
+    if (workspaceCommand) {
+      setChatError(null);
+      setDraftForSession(sessionId, "");
+
+      appendSessionMessage(sessionId, {
+        id: createMessageId(),
+        role: "user",
+        providerLabel: WORKSPACE_TOOL_LABEL,
+        content,
+      });
+
+      let responseText = "";
+      if (workspaceCommand.kind === "help") {
+        responseText = getWorkspaceHelpText();
+      } else if (!activeFile) {
+        responseText =
+          "No active file. Select a note tab first, then run workspace commands.";
+      } else {
+        switch (workspaceCommand.kind) {
+          case "read": {
+            responseText = [
+              `Reading ${activeFile.title}:`,
+              "",
+              activeFile.content || "(File is empty)",
+            ].join("\n");
+            break;
+          }
+          case "write": {
+            const didWrite = onOverwriteActiveFile(workspaceCommand.content);
+            responseText = didWrite
+              ? `Wrote ${workspaceCommand.content.length} characters to ${activeFile.title}.`
+              : "Failed to write file content.";
+            break;
+          }
+          case "append": {
+            const didAppend = onAppendToActiveFile(workspaceCommand.content);
+            responseText = didAppend
+              ? `Appended ${workspaceCommand.content.length} characters to ${activeFile.title}.`
+              : "Failed to append content.";
+            break;
+          }
+          case "replace": {
+            if (!workspaceCommand.find) {
+              responseText =
+                "Replace command failed: find text cannot be empty.";
+              break;
+            }
+
+            const replacementCount = onReplaceInActiveFile(
+              workspaceCommand.find,
+              workspaceCommand.replaceWith,
+            );
+            responseText =
+              replacementCount > 0
+                ? `Updated ${activeFile.title}. Replaced ${replacementCount} occurrence(s).`
+                : `No match for "${workspaceCommand.find}" in ${activeFile.title}.`;
+            break;
+          }
+        }
+      }
+
+      appendSessionMessage(sessionId, {
+        id: createMessageId(),
+        role: "assistant",
+        providerLabel: WORKSPACE_TOOL_LABEL,
+        content: responseText,
+      });
+      return;
+    }
+
     if (!selectedProvider) {
       setChatError("Select a provider first.");
       return;
@@ -508,13 +706,8 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
       return;
     }
 
-    const content = draftMessage.trim();
-    if (!content) {
-      return;
-    }
-
     setChatError(null);
-    setDraftMessage("");
+    setDraftForSession(sessionId, "");
     setIsSendingMessage(true);
 
     const userMessage: AgentChatMessage = {
@@ -524,7 +717,14 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
       content,
     };
 
-    setMessages((previous) => [...previous, userMessage]);
+    appendSessionMessage(sessionId, userMessage);
+
+    const history = sessionMessages
+      .filter((message) => message.providerLabel !== WORKSPACE_TOOL_LABEL)
+      .map((message) => ({
+        role: message.role,
+        content: message.content,
+      }));
 
     try {
       const response = await fetch("/api/agent/chat", {
@@ -535,6 +735,8 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
         body: JSON.stringify({
           providerId: selectedProvider.id,
           message: content,
+          history,
+          sessionId,
           model:
             selectedProvider.id === "github-copilot"
               ? selectedGithubModel
@@ -558,7 +760,7 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
         content: payload.message,
       };
 
-      setMessages((previous) => [...previous, assistantMessage]);
+      appendSessionMessage(sessionId, assistantMessage);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to send message.";
@@ -714,23 +916,9 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
                               Connect OAuth
                             </button>
                           ) : (
-                            <button
-                              type="button"
-                              className="agent-provider-action"
-                              onClick={() => void connectViaMock(provider.id)}
-                              disabled={isActionPending}
-                            >
-                              {isActionPending ? (
-                                <Loader2
-                                  size={14}
-                                  className="spin"
-                                  aria-hidden
-                                />
-                              ) : (
-                                <Sparkles size={14} aria-hidden />
-                              )}
-                              Connect Demo
-                            </button>
+                            <span className="agent-provider-disabled-note">
+                              OAuth env not configured yet.
+                            </span>
                           )}
                         </div>
                       </article>
@@ -755,6 +943,13 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
               <span className="agent-section-title">Chat</span>
               <span className="agent-chat-provider-pill">
                 {selectedProvider?.label ?? "No provider"}
+              </span>
+            </div>
+
+            <div className="agent-file-session-row">
+              <span className="agent-file-session-label">Session file</span>
+              <span className="agent-file-session-value">
+                {activeFile?.title ?? "No open file"}
               </span>
             </div>
 
@@ -783,8 +978,8 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
             <div className="agent-chat-thread" ref={messagesViewportRef}>
               {messages.length === 0 && (
                 <div className="agent-chat-empty">
-                  Connect provider OAuth dulu, lalu kirim prompt untuk mulai
-                  chat.
+                  Use `/help` for workspace commands. Each open file has its own
+                  isolated chat session.
                 </div>
               )}
 
@@ -811,9 +1006,11 @@ export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
             <div className="agent-chat-compose">
               <textarea
                 className="agent-chat-input"
-                placeholder="Type prompt..."
+                placeholder="Type prompt or /read /write /append /replace"
                 value={draftMessage}
-                onChange={(event) => setDraftMessage(event.target.value)}
+                onChange={(event) =>
+                  setDraftForSession(currentSessionId, event.target.value)
+                }
                 onKeyDown={handleComposerKeyDown}
               />
               <button

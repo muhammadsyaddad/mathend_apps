@@ -9,6 +9,10 @@ type LiveChatRequest = {
   accessToken: string;
   message: string;
   modelOverride?: string;
+  history?: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>;
 };
 
 const resolveModel = (
@@ -76,6 +80,10 @@ const requestOpenAICompatible = async (
   accessToken: string,
   message: string,
   modelOverride?: string,
+  history?: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>,
 ): Promise<string> => {
   const bearerToken =
     config.authMode === "static-token" && config.staticToken
@@ -104,6 +112,10 @@ const requestOpenAICompatible = async (
           content:
             "You are a concise math assistant. Give clear, structured reasoning.",
         },
+        ...(history ?? []).map((item) => ({
+          role: item.role,
+          content: item.content,
+        })),
         {
           role: "user",
           content: message,
@@ -133,6 +145,10 @@ const requestClaudeCompatible = async (
   accessToken: string,
   message: string,
   modelOverride?: string,
+  history?: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>,
 ): Promise<string> => {
   const bearerToken =
     config.authMode === "static-token" && config.staticToken
@@ -157,6 +173,10 @@ const requestClaudeCompatible = async (
       model,
       max_tokens: 700,
       messages: [
+        ...(history ?? []).map((item) => ({
+          role: item.role,
+          content: item.content,
+        })),
         {
           role: "user",
           content: message,
@@ -187,6 +207,7 @@ export const requestAgentLiveChat = async ({
   accessToken,
   message,
   modelOverride,
+  history,
 }: LiveChatRequest): Promise<string | null> => {
   const config = getAgentProviderChatRuntimeConfig(providerId);
   if (!config) {
@@ -200,6 +221,7 @@ export const requestAgentLiveChat = async ({
       accessToken,
       message,
       modelOverride,
+      history,
     );
   }
 
@@ -209,5 +231,6 @@ export const requestAgentLiveChat = async ({
     accessToken,
     message,
     modelOverride,
+    history,
   );
 };

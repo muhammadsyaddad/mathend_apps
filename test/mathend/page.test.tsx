@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import Home from "../../../apps/mathend/app/page";
+import Home from "../../apps/mathend/app/page";
 
 describe("mathend home page", () => {
   it("renders initial note content", () => {

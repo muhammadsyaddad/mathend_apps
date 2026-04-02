@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getAgentProviderChatRuntimeConfig } from "../../../apps/mathend/app/lib/agent-provider-chat-runtime";
+import { getAgentProviderChatRuntimeConfig } from "../../apps/mathend/app/lib/agent-provider-chat-runtime";
 
 const resetGithubEnv = () => {
   delete process.env.MATHEND_GITHUB_COPILOT_CHAT_ENDPOINT;

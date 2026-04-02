@@ -178,6 +178,9 @@ const STORAGE_SELECTED_NOTE_KEY = "mathend.selected-note.v1";
 const STORAGE_SIDEBAR_COLLAPSED_KEY = "mathend.sidebar-collapsed.v1";
 const STORAGE_OPEN_TABS_KEY = "mathend.open-tabs.v1";
 
+const getNoteSubtitle = (content: string): string =>
+  content.replace(/\s+/g, " ").trim().slice(0, 42);
+
 const getModifiedLabel = (timestamp: number): string => {
   const now = Date.now();
   const diffHours = (now - timestamp) / (1000 * 60 * 60);
@@ -291,6 +294,17 @@ export default function Home() {
     notes[0];
 
   const selectedNoteContent = selectedNote?.content.join("\n\n") ?? "";
+  const activeAgentFile = useMemo(() => {
+    if (!selectedNote) {
+      return null;
+    }
+
+    return {
+      id: selectedNote.id,
+      title: selectedNote.title,
+      content: selectedNote.content.join("\n\n"),
+    };
+  }, [selectedNote]);
 
   const openTabs = useMemo(
     () =>
@@ -470,6 +484,62 @@ export default function Home() {
     [selectedNoteId],
   );
 
+  const overwriteActiveFile = useCallback(
+    (nextContent: string): boolean => {
+      if (!selectedNoteId) {
+        return false;
+      }
+
+      updateSelectedNote((note) => ({
+        ...note,
+        content: [nextContent],
+        subtitle: getNoteSubtitle(nextContent),
+      }));
+      return true;
+    },
+    [selectedNoteId, updateSelectedNote],
+  );
+
+  const appendToActiveFile = useCallback(
+    (appendContent: string): boolean => {
+      if (!selectedNoteId) {
+        return false;
+      }
+
+      const nextValue = `${selectedNoteContent}${appendContent}`;
+      updateSelectedNote((note) => ({
+        ...note,
+        content: [nextValue],
+        subtitle: getNoteSubtitle(nextValue),
+      }));
+      return true;
+    },
+    [selectedNoteContent, selectedNoteId, updateSelectedNote],
+  );
+
+  const replaceInActiveFile = useCallback(
+    (find: string, replaceWith: string): number => {
+      if (!selectedNoteId || !find) {
+        return 0;
+      }
+
+      const parts = selectedNoteContent.split(find);
+      const replacementCount = Math.max(parts.length - 1, 0);
+      if (replacementCount === 0) {
+        return 0;
+      }
+
+      const nextValue = parts.join(replaceWith);
+      updateSelectedNote((note) => ({
+        ...note,
+        content: [nextValue],
+        subtitle: getNoteSubtitle(nextValue),
+      }));
+      return replacementCount;
+    },
+    [selectedNoteContent, selectedNoteId, updateSelectedNote],
+  );
+
   const navigatePalette = useCallback(
     (direction: "up" | "down") => {
       setPaletteIndex((current) => {
@@ -558,7 +628,7 @@ export default function Home() {
       updateSelectedNote((note) => ({
         ...note,
         content: [nextValue],
-        subtitle: nextValue.slice(0, 42),
+        subtitle: getNoteSubtitle(nextValue),
       }));
 
       setPaletteQuery("");
@@ -580,7 +650,7 @@ export default function Home() {
       updateSelectedNote((note) => ({
         ...note,
         content: [nextValue],
-        subtitle: nextValue.slice(0, 42),
+        subtitle: getNoteSubtitle(nextValue),
       }));
       evaluateSlashTrigger(nextValue, cursorPosition);
     },
@@ -992,7 +1062,12 @@ export default function Home() {
             )}
           </div>
         </div>
-        <SettingsTrigger />
+        <SettingsTrigger
+          activeFile={activeAgentFile}
+          onOverwriteActiveFile={overwriteActiveFile}
+          onAppendToActiveFile={appendToActiveFile}
+          onReplaceInActiveFile={replaceInActiveFile}
+        />
       </aside>
 
       <main className="editor-canvas">

@@ -1,9 +1,11 @@
 in the ui stuff:
-- [ ] make animation sidebar is better
-- [ ] make make the agent panel 
-
+- [ ] explore the ui 
+- [ ] made the marketig page 
+ 
 in the backend stuff:
-- [ ] made auth for codex, github copilot, and codex
-- [ ] made the agent panel works
-- [ ] made the agent can edit the the text in line
-- [ ] made the git trees fitur
+- [ ] made the agent can the file , and each file oppen has different session
+- [ ] made the agent can read the file and write the file
+- [ ] more support for eq math 
+ 
+ made the agent can read the file and write the file and also made the agent can the file , and each file oppen has different session
+

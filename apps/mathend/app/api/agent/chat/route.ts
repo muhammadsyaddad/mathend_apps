@@ -16,6 +16,11 @@ type AgentChatRequestBody = {
   providerId?: string;
   message?: string;
   model?: string;
+  sessionId?: string;
+  history?: Array<{
+    role?: "user" | "assistant";
+    content?: string;
+  }>;
 };
 
 export async function POST(request: Request) {
@@ -32,6 +37,24 @@ export async function POST(request: Request) {
   const providerId = body.providerId;
   const message = (body.message ?? "").trim();
   const model = (body.model ?? "").trim();
+  const sessionId = (body.sessionId ?? "").trim();
+  const history = Array.isArray(body.history)
+    ? body.history
+        .filter(
+          (item): item is { role: "user" | "assistant"; content: string } =>
+            Boolean(
+              item &&
+              (item.role === "user" || item.role === "assistant") &&
+              typeof item.content === "string",
+            ),
+        )
+        .map((item) => ({
+          role: item.role,
+          content: item.content.trim(),
+        }))
+        .filter((item) => item.content.length > 0)
+        .slice(-12)
+    : [];
 
   if (!providerId || !isAgentProviderId(providerId)) {
     return NextResponse.json(
@@ -71,6 +94,7 @@ export async function POST(request: Request) {
         providerId,
         accessToken: token.accessToken,
         message,
+        history,
         modelOverride: model || undefined,
       });
       if (liveText) {
@@ -79,18 +103,24 @@ export async function POST(request: Request) {
         responseText = createMockAgentResponse({
           providerLabel: connection.providerLabel,
           message,
+          history,
+          sessionId: sessionId || undefined,
         });
       }
     } catch {
       responseText = createMockAgentResponse({
         providerLabel: connection.providerLabel,
         message,
+        history,
+        sessionId: sessionId || undefined,
       });
     }
   } else {
     responseText = createMockAgentResponse({
       providerLabel: connection.providerLabel,
       message,
+      history,
+      sessionId: sessionId || undefined,
     });
   }
 

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ExportModal } from "../../../apps/mathend/app/components/export-modal";
+import { ExportModal } from "../../apps/mathend/app/components/export-modal";
 
 describe("ExportModal", () => {
   it("does not render when closed initially", () => {

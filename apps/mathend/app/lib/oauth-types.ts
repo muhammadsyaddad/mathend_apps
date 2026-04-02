@@ -10,7 +10,7 @@ export type OAuthConnection = {
   providerLabel: string;
   accountLabel: string;
   connectedAt: string;
-  mode: "mock" | "oauth";
+  mode: "oauth";
 };
 
 export type OAuthConnectionMap = Partial<
