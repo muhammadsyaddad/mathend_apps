@@ -1,0 +1,839 @@
+"use client";
+
+import {
+  Ellipsis,
+  Loader2,
+  SendHorizontal,
+  Sparkles,
+  Unplug,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
+import { createPortal } from "react-dom";
+
+type AgentPanelProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+type ProviderConnection = {
+  providerId: string;
+  providerLabel: string;
+  accountLabel: string;
+  connectedAt: string;
+  mode: "mock" | "oauth";
+};
+
+type AgentProvider = {
+  id: string;
+  label: string;
+  configured: boolean;
+  connected: boolean;
+  connection?: ProviderConnection;
+};
+
+type OAuthConnectResponse = {
+  flow?: "authorization_code" | "device_code";
+  authorizationUrl?: string;
+  verificationUri?: string;
+  verificationUriComplete?: string;
+  userCode?: string;
+  intervalSeconds?: number;
+  expiresIn?: number;
+  error?: string;
+};
+
+type DevicePollResponse = {
+  connected?: boolean;
+  pending?: boolean;
+  retryAfterSeconds?: number;
+  providerId?: string;
+  error?: string;
+};
+
+type PendingDeviceAuth = {
+  providerId: string;
+  userCode: string;
+  verificationUri: string;
+  verificationUriComplete?: string;
+  intervalSeconds: number;
+  expiresAt: number;
+};
+
+type AgentChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  providerLabel: string;
+  content: string;
+};
+
+const GITHUB_MODEL_OPTIONS = [
+  {
+    label: "GPT-4o mini",
+    value: "openai/gpt-4o-mini",
+  },
+  {
+    label: "GPT-4.1",
+    value: "openai/gpt-4.1",
+  },
+  {
+    label: "GPT-4.1 mini",
+    value: "openai/gpt-4.1-mini",
+  },
+  {
+    label: "o4-mini",
+    value: "openai/o4-mini",
+  },
+  {
+    label: "gpt-5-chat",
+    value: "openai/gpt-5-chat",
+  },
+] as const;
+
+const createMessageId = (): string =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const formatConnectedAt = (iso: string): string => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "Connected";
+  }
+
+  return `Connected ${date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })}`;
+};
+
+export default function AgentPanel({ isOpen, onClose }: AgentPanelProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [providers, setProviders] = useState<AgentProvider[]>([]);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(false);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  const [isActionPending, setIsActionPending] = useState(false);
+  const [isProviderMenuOpen, setIsProviderMenuOpen] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
+    null,
+  );
+  const [messages, setMessages] = useState<AgentChatMessage[]>([]);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [oauthNotice, setOauthNotice] = useState<string | null>(null);
+  const [pendingDeviceAuth, setPendingDeviceAuth] =
+    useState<PendingDeviceAuth | null>(null);
+  const [selectedGithubModel, setSelectedGithubModel] = useState<string>(
+    GITHUB_MODEL_OPTIONS[0].value,
+  );
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
+  const providerMenuRef = useRef<HTMLDivElement | null>(null);
+  const devicePollTimerRef = useRef<number | null>(null);
+
+  const clearDevicePollTimer = useCallback(() => {
+    if (devicePollTimerRef.current === null) {
+      return;
+    }
+    window.clearTimeout(devicePollTimerRef.current);
+    devicePollTimerRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const selectedProvider = useMemo(
+    () => providers.find((provider) => provider.id === selectedProviderId),
+    [providers, selectedProviderId],
+  );
+
+  const loadProviders = useCallback(async () => {
+    setIsLoadingProviders(true);
+    setProvidersError(null);
+
+    try {
+      const response = await fetch("/api/oauth/providers", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as {
+        providers?: AgentProvider[];
+        error?: string;
+      };
+
+      if (!response.ok || !payload.providers) {
+        throw new Error(payload.error ?? "Failed to fetch provider list.");
+      }
+
+      setProviders(payload.providers);
+      setSelectedProviderId((previous) => {
+        if (
+          previous &&
+          payload.providers?.some((item) => item.id === previous)
+        ) {
+          return previous;
+        }
+        const connectedProvider = payload.providers?.find(
+          (item) => item.connected,
+        )?.id;
+        return connectedProvider ?? payload.providers?.[0]?.id ?? null;
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch providers.";
+      setProvidersError(message);
+    } finally {
+      setIsLoadingProviders(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    void loadProviders();
+  }, [isOpen, loadProviders]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const oauthState = url.searchParams.get("oauth");
+    if (!oauthState) {
+      return;
+    }
+
+    const provider = url.searchParams.get("provider") ?? "provider";
+    const reason = url.searchParams.get("message") ?? "";
+
+    if (oauthState === "connected") {
+      clearDevicePollTimer();
+      setPendingDeviceAuth(null);
+      setIsActionPending(false);
+      setOauthNotice(`OAuth connected: ${provider}.`);
+    } else {
+      clearDevicePollTimer();
+      setPendingDeviceAuth(null);
+      setIsActionPending(false);
+      setOauthNotice(
+        `OAuth failed for ${provider}${reason ? ` (${reason})` : ""}.`,
+      );
+    }
+
+    url.searchParams.delete("oauth");
+    url.searchParams.delete("provider");
+    url.searchParams.delete("message");
+    window.history.replaceState({}, "", url.toString());
+  }, [clearDevicePollTimer]);
+
+  useEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTop = viewport.scrollHeight;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!isProviderMenuOpen) {
+      return;
+    }
+
+    const handleOutsideMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      if (providerMenuRef.current?.contains(target)) {
+        return;
+      }
+      setIsProviderMenuOpen(false);
+    };
+
+    window.addEventListener("mousedown", handleOutsideMouseDown);
+    return () => {
+      window.removeEventListener("mousedown", handleOutsideMouseDown);
+    };
+  }, [isProviderMenuOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    return () => {
+      clearDevicePollTimer();
+    };
+  }, [clearDevicePollTimer]);
+
+  useEffect(() => {
+    if (!pendingDeviceAuth) {
+      return;
+    }
+
+    let isDisposed = false;
+
+    const schedulePoll = (seconds: number) => {
+      const timeoutSeconds =
+        Number.isFinite(seconds) && seconds > 0 ? seconds : 5;
+      clearDevicePollTimer();
+      devicePollTimerRef.current = window.setTimeout(() => {
+        if (!isDisposed) {
+          void pollDeviceAuthorization();
+        }
+      }, timeoutSeconds * 1000);
+    };
+
+    const pollDeviceAuthorization = async () => {
+      if (Date.now() >= pendingDeviceAuth.expiresAt) {
+        clearDevicePollTimer();
+        setPendingDeviceAuth(null);
+        setIsActionPending(false);
+        setProvidersError("Device code expired. Click Connect OAuth again.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/oauth/device/poll", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ providerId: pendingDeviceAuth.providerId }),
+        });
+
+        const payload = (await response.json()) as DevicePollResponse;
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Device authorization failed.");
+        }
+
+        if (payload.connected) {
+          clearDevicePollTimer();
+          setPendingDeviceAuth(null);
+          setIsActionPending(false);
+          setOauthNotice(`OAuth connected: ${pendingDeviceAuth.providerId}.`);
+          await loadProviders();
+          return;
+        }
+
+        if (payload.pending) {
+          const retryAfter =
+            typeof payload.retryAfterSeconds === "number"
+              ? payload.retryAfterSeconds
+              : pendingDeviceAuth.intervalSeconds;
+          schedulePoll(retryAfter);
+          return;
+        }
+
+        throw new Error("Unexpected device polling response.");
+      } catch (error) {
+        clearDevicePollTimer();
+        setPendingDeviceAuth(null);
+        setIsActionPending(false);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Device authorization failed.";
+        setProvidersError(message);
+      }
+    };
+
+    schedulePoll(pendingDeviceAuth.intervalSeconds);
+
+    return () => {
+      isDisposed = true;
+      clearDevicePollTimer();
+    };
+  }, [clearDevicePollTimer, loadProviders, pendingDeviceAuth]);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  const connectViaOAuth = async (providerId: string) => {
+    setChatError(null);
+    setProvidersError(null);
+    setPendingDeviceAuth(null);
+    clearDevicePollTimer();
+    setIsActionPending(true);
+
+    try {
+      const response = await fetch("/api/oauth/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ providerId }),
+      });
+
+      const payload = (await response.json()) as OAuthConnectResponse;
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "OAuth connect failed.");
+      }
+
+      if (payload.flow === "device_code") {
+        if (!payload.userCode || !payload.verificationUri) {
+          throw new Error("Device flow response is incomplete.");
+        }
+
+        const intervalSeconds =
+          typeof payload.intervalSeconds === "number" &&
+          payload.intervalSeconds > 0
+            ? payload.intervalSeconds
+            : 5;
+        const expiresIn =
+          typeof payload.expiresIn === "number" && payload.expiresIn > 0
+            ? payload.expiresIn
+            : 900;
+        const nextPending: PendingDeviceAuth = {
+          providerId,
+          userCode: payload.userCode,
+          verificationUri: payload.verificationUri,
+          verificationUriComplete: payload.verificationUriComplete,
+          intervalSeconds,
+          expiresAt: Date.now() + expiresIn * 1000,
+        };
+
+        setPendingDeviceAuth(nextPending);
+        setOauthNotice(
+          "Open GitHub verification, enter the code, and wait here.",
+        );
+        setIsActionPending(true);
+
+        return;
+      }
+
+      if (!payload.authorizationUrl) {
+        throw new Error("OAuth authorization URL is missing.");
+      }
+
+      window.location.assign(payload.authorizationUrl);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "OAuth connect failed.";
+      setProvidersError(message);
+      setIsActionPending(false);
+    }
+  };
+
+  const connectViaMock = async (providerId: string) => {
+    setChatError(null);
+    setProvidersError(null);
+    setPendingDeviceAuth(null);
+    clearDevicePollTimer();
+    setIsActionPending(true);
+    try {
+      const response = await fetch("/api/oauth/mock-connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ providerId }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to connect demo account.");
+      }
+      await loadProviders();
+      setOauthNotice("Demo OAuth connected for local testing.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed demo OAuth connect.";
+      setProvidersError(message);
+    } finally {
+      setIsActionPending(false);
+    }
+  };
+
+  const disconnectProvider = async (providerId: string) => {
+    setChatError(null);
+    setProvidersError(null);
+    setPendingDeviceAuth(null);
+    clearDevicePollTimer();
+    setIsActionPending(true);
+    try {
+      const response = await fetch("/api/oauth/disconnect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ providerId }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to disconnect account.");
+      }
+
+      await loadProviders();
+      setOauthNotice("Provider disconnected.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to disconnect.";
+      setProvidersError(message);
+    } finally {
+      setIsActionPending(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!selectedProvider) {
+      setChatError("Select a provider first.");
+      return;
+    }
+
+    if (!selectedProvider.connected) {
+      setChatError("Connect provider via OAuth before chatting.");
+      return;
+    }
+
+    const content = draftMessage.trim();
+    if (!content) {
+      return;
+    }
+
+    setChatError(null);
+    setDraftMessage("");
+    setIsSendingMessage(true);
+
+    const userMessage: AgentChatMessage = {
+      id: createMessageId(),
+      role: "user",
+      providerLabel: selectedProvider.label,
+      content,
+    };
+
+    setMessages((previous) => [...previous, userMessage]);
+
+    try {
+      const response = await fetch("/api/agent/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          providerId: selectedProvider.id,
+          message: content,
+          model:
+            selectedProvider.id === "github-copilot"
+              ? selectedGithubModel
+              : undefined,
+        }),
+      });
+      const payload = (await response.json()) as {
+        providerLabel?: string;
+        message?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.message) {
+        throw new Error(payload.error ?? "Failed to send message.");
+      }
+
+      const assistantMessage: AgentChatMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        providerLabel: payload.providerLabel ?? selectedProvider.label,
+        content: payload.message,
+      };
+
+      setMessages((previous) => [...previous, assistantMessage]);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to send message.";
+      setChatError(message);
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const handleComposerKeyDown = (
+    event: ReactKeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void sendMessage();
+    }
+  };
+
+  return createPortal(
+    <>
+      <aside
+        className={isOpen ? "agent-panel agent-panel-open" : "agent-panel"}
+      >
+        <header className="agent-panel-head">
+          <h3 className="agent-panel-title">Agent Panel</h3>
+          <div className="agent-panel-menu-wrap" ref={providerMenuRef}>
+            <button
+              type="button"
+              className="agent-panel-menu-toggle"
+              onClick={() => setIsProviderMenuOpen((value) => !value)}
+              aria-label="OAuth provider menu"
+              aria-expanded={isProviderMenuOpen}
+              aria-controls="agent-provider-menu"
+            >
+              <Ellipsis size={16} aria-hidden />
+            </button>
+
+            {isProviderMenuOpen && (
+              <div id="agent-provider-menu" className="agent-provider-menu">
+                <div className="agent-provider-menu-head">
+                  <span>Connect OAuth Provider</span>
+                  <button
+                    type="button"
+                    className="agent-inline-action"
+                    onClick={() => void loadProviders()}
+                    disabled={isLoadingProviders || isActionPending}
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {oauthNotice && (
+                  <p className="agent-inline-notice">{oauthNotice}</p>
+                )}
+                {providersError && (
+                  <p className="agent-inline-error">{providersError}</p>
+                )}
+
+                {pendingDeviceAuth && (
+                  <div className="agent-device-card">
+                    <p className="agent-device-title">GitHub Device Login</p>
+                    <p className="agent-device-copy">
+                      Open{" "}
+                      <a
+                        href={
+                          pendingDeviceAuth.verificationUriComplete ??
+                          pendingDeviceAuth.verificationUri
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {pendingDeviceAuth.verificationUri}
+                      </a>{" "}
+                      then enter this code:
+                    </p>
+                    <p className="agent-device-code">
+                      {pendingDeviceAuth.userCode}
+                    </p>
+                  </div>
+                )}
+
+                <div className="agent-provider-menu-list">
+                  {providers.map((provider) => {
+                    const isSelected = provider.id === selectedProviderId;
+                    const isPendingDeviceAuth =
+                      pendingDeviceAuth?.providerId === provider.id;
+                    return (
+                      <article
+                        key={provider.id}
+                        className="agent-menu-provider"
+                      >
+                        <button
+                          type="button"
+                          className={
+                            isSelected
+                              ? "agent-menu-provider-main agent-menu-provider-main-active"
+                              : "agent-menu-provider-main"
+                          }
+                          onClick={() => setSelectedProviderId(provider.id)}
+                        >
+                          <span>{provider.label}</span>
+                          <span>
+                            {provider.connected ? "Connected" : "Disconnected"}
+                          </span>
+                        </button>
+
+                        <div className="agent-provider-meta">
+                          {provider.connected && provider.connection ? (
+                            <span>
+                              {provider.connection.accountLabel} ·{" "}
+                              {formatConnectedAt(
+                                provider.connection.connectedAt,
+                              )}
+                            </span>
+                          ) : isPendingDeviceAuth ? (
+                            <span>Waiting for GitHub code verification.</span>
+                          ) : provider.configured ? (
+                            <span>Ready for OAuth flow.</span>
+                          ) : (
+                            <span>OAuth env not configured yet.</span>
+                          )}
+                        </div>
+
+                        <div className="agent-provider-actions">
+                          {provider.connected ? (
+                            <button
+                              type="button"
+                              className="agent-provider-action agent-provider-action-muted"
+                              onClick={() =>
+                                void disconnectProvider(provider.id)
+                              }
+                              disabled={isActionPending}
+                            >
+                              <Unplug size={14} aria-hidden />
+                              Disconnect
+                            </button>
+                          ) : provider.configured ? (
+                            <button
+                              type="button"
+                              className="agent-provider-action"
+                              onClick={() => void connectViaOAuth(provider.id)}
+                              disabled={isActionPending}
+                            >
+                              {isActionPending ? (
+                                <Loader2
+                                  size={14}
+                                  className="spin"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <Sparkles size={14} aria-hidden />
+                              )}
+                              Connect OAuth
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="agent-provider-action"
+                              onClick={() => void connectViaMock(provider.id)}
+                              disabled={isActionPending}
+                            >
+                              {isActionPending ? (
+                                <Loader2
+                                  size={14}
+                                  className="spin"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <Sparkles size={14} aria-hidden />
+                              )}
+                              Connect Demo
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {isLoadingProviders && (
+                  <div className="agent-provider-loading">
+                    <Loader2 size={14} className="spin" aria-hidden />
+                    Loading providers...
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div className="agent-panel-body">
+          <div className="agent-chat-box">
+            <div className="agent-section-head">
+              <span className="agent-section-title">Chat</span>
+              <span className="agent-chat-provider-pill">
+                {selectedProvider?.label ?? "No provider"}
+              </span>
+            </div>
+
+            {selectedProvider?.id === "github-copilot" && (
+              <div className="agent-model-row">
+                <label htmlFor="github-model" className="agent-model-label">
+                  Model
+                </label>
+                <select
+                  id="github-model"
+                  className="agent-model-select"
+                  value={selectedGithubModel}
+                  onChange={(event) =>
+                    setSelectedGithubModel(event.target.value)
+                  }
+                >
+                  {GITHUB_MODEL_OPTIONS.map((model) => (
+                    <option key={model.value} value={model.value}>
+                      {model.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="agent-chat-thread" ref={messagesViewportRef}>
+              {messages.length === 0 && (
+                <div className="agent-chat-empty">
+                  Connect provider OAuth dulu, lalu kirim prompt untuk mulai
+                  chat.
+                </div>
+              )}
+
+              {messages.map((message) => {
+                const prefix = message.role === "assistant" ? ">" : ".";
+                return (
+                  <p
+                    key={message.id}
+                    className={
+                      message.role === "assistant"
+                        ? "agent-chat-line agent-chat-line-assistant"
+                        : "agent-chat-line agent-chat-line-user"
+                    }
+                  >
+                    <span className="agent-chat-prefix">{prefix}</span>
+                    {message.content}
+                  </p>
+                );
+              })}
+            </div>
+
+            {chatError && <p className="agent-inline-error">{chatError}</p>}
+
+            <div className="agent-chat-compose">
+              <textarea
+                className="agent-chat-input"
+                placeholder="Type prompt..."
+                value={draftMessage}
+                onChange={(event) => setDraftMessage(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
+              />
+              <button
+                type="button"
+                className="agent-chat-send"
+                onClick={() => void sendMessage()}
+                disabled={isSendingMessage}
+                aria-label="Send message"
+              >
+                {isSendingMessage ? (
+                  <Loader2 size={15} className="spin" aria-hidden />
+                ) : (
+                  <SendHorizontal size={15} aria-hidden />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>,
+    document.body,
+  );
+}

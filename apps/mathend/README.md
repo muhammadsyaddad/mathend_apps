@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Mathend App
 
-## Getting Started
+Mathend adalah workspace catatan matematis dengan **Agent Panel** yang sekarang support:
 
-First, run the development server:
+- OAuth provider untuk `Codex GitHub Copilot`
+- OAuth provider untuk `Claude Code AI`
+- Chat panel berbasis provider yang terhubung
+- Fallback `Connect Demo` untuk local testing jika env OAuth belum diisi
+
+## Jalankan lokal
+
+Dari root monorepo:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App ini jalan di `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup OAuth env
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+1. Copy template env:
 
-## Learn More
+```bash
+cp apps/mathend/.env.example apps/mathend/.env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. Isi value pada `apps/mathend/.env.local`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Contoh variabel:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `MATHEND_GITHUB_COPILOT_CLIENT_ID`
+- `MATHEND_CLAUDE_CODE_CLIENT_ID`
+- `MATHEND_CLAUDE_CODE_CLIENT_SECRET`
+- dan endpoint auth/token provider sesuai platform OAuth yang dipakai
+- optional live chat endpoint/model:
+  - `MATHEND_GITHUB_COPILOT_CHAT_ENDPOINT`
+  - `MATHEND_GITHUB_COPILOT_CHAT_MODEL`
+  - `MATHEND_CLAUDE_CODE_CHAT_ENDPOINT`
+  - `MATHEND_CLAUDE_CODE_CHAT_MODEL`
+  - `MATHEND_GITHUB_MODELS_PAT` (opsional, untuk GitHub Models langsung)
+  - `MATHEND_GITHUB_MODELS_ORG` (opsional)
 
-## Deploy on Vercel
+Catatan:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- GitHub Copilot sekarang pakai device authorization flow (kode verifikasi), jadi cukup `MATHEND_GITHUB_COPILOT_CLIENT_ID` dan endpoint default GitHub.
+- `MATHEND_GITHUB_COPILOT_CLIENT_SECRET` tidak wajib untuk flow GitHub device code.
+- Untuk Claude Code AI, isi `AUTH_URL` dan `TOKEN_URL` sesuai penyedia OAuth yang kamu gunakan.
+- Untuk GitHub Copilot chat, kamu bisa pakai OAuth token hasil login, atau set `MATHEND_GITHUB_MODELS_PAT` agar request chat diarahkan ke `models.github.ai`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Callback URL
+
+Callback path yang dipakai aplikasi:
+
+- `http://localhost:3000/api/oauth/callback/github-copilot`
+- `http://localhost:3000/api/oauth/callback/claude-code`
+
+Daftarkan URL callback ini pada OAuth app provider terkait.
+
+## API yang tersedia
+
+- `GET /api/oauth/providers` -> status provider (configured/connected)
+- `POST /api/oauth/connect` -> mulai OAuth flow (GitHub return device code, provider lain return authorize URL)
+- `POST /api/oauth/device/poll` -> polling status device code sampai GitHub login selesai
+- `GET /api/oauth/callback/[providerId]` -> callback + token exchange
+- `POST /api/oauth/mock-connect` -> connect demo account (untuk local dev)
+- `POST /api/oauth/disconnect` -> putuskan koneksi provider
+- `POST /api/agent/chat` -> kirim message ke agent panel (live jika endpoint tersedia, fallback ke mock)
+
+## Verifikasi
+
+Sudah diverifikasi dengan:
+
+```bash
+bun run --filter mathend check-types
+bun run --filter mathend lint
+```

@@ -666,10 +666,9 @@ export default function Home() {
         setSelectedNoteId(rawSelectedNote);
       }
 
-      if (rawSidebarCollapsed === "true") {
-        setIsSidebarCollapsed(true);
+      if (rawSidebarCollapsed === "false") {
+        setIsSidebarCollapsed(false);
       }
-
       if (rawOpenTabs) {
         const parsedTabs = JSON.parse(rawOpenTabs) as unknown;
         if (
@@ -907,7 +906,7 @@ export default function Home() {
 
   return (
     <div
-      className={`library-app-shell ${isSidebarOpenMobile ? "sidebar-open-mobile" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}
+      className={`library-app-shell ${isSidebarOpenMobile ? "sidebar-open-mobile" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}
     >
       <button
         type="button"
@@ -920,19 +919,19 @@ export default function Home() {
         <div className="sidebar-header">
           <button
             type="button"
-            aria-label="Collapse sidebar"
-            className="icon-action sidebar-shrink-toggle"
-            onClick={toggleSidebarMode}
-          >
-            {isSidebarCollapsed ? ">>" : "<<"}
-          </button>
-          <button
-            type="button"
             className="new-note-button"
             onClick={createNewNote}
           >
             <span aria-hidden>+</span>
             New File
+          </button>
+          <button
+            type="button"
+            aria-label="Collapse sidebar"
+            className="icon-action sidebar-shrink-toggle"
+            onClick={toggleSidebarMode}
+          >
+            {isSidebarCollapsed ? ">" : "<"}
           </button>
         </div>
 
@@ -979,9 +978,6 @@ export default function Home() {
                 aria-label={note.title}
               >
                 <div className="note-row">
-                  <span className="note-icon" aria-hidden>
-                    .
-                  </span>
                   <h2 className="note-title">{note.title}</h2>
                 </div>
                 <div className="note-subrow">
