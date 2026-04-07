@@ -1537,6 +1537,13 @@ a {
   gap: 0.46rem;
 }
 
+.agent-model-hint {
+  color: var(--text-muted);
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+}
+
 .agent-model-label {
   color: var(--text-muted);
   font-family: var(--font-mono), "IBM Plex Mono", monospace;

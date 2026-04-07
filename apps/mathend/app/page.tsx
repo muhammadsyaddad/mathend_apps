@@ -973,17 +973,16 @@ export default function Home() {
     [openNoteInTab],
   );
 
-  const updateSelectedNote = useCallback(
-    (updater: (note: NoteItem) => NoteItem) => {
-      if (!selectedNoteId) {
-        return;
-      }
+  const updateNoteById = useCallback(
+    (noteId: string, updater: (note: NoteItem) => NoteItem) => {
       const now = Date.now();
+
       setNotes((previous) =>
         previous.map((note) => {
-          if (note.id !== selectedNoteId) {
+          if (note.id !== noteId) {
             return note;
           }
+
           const updated = updater(note);
           return {
             ...updated,
@@ -993,63 +992,88 @@ export default function Home() {
         }),
       );
     },
-    [selectedNoteId],
+    [],
+  );
+
+  const updateSelectedNote = useCallback(
+    (updater: (note: NoteItem) => NoteItem) => {
+      if (!selectedNoteId) {
+        return;
+      }
+
+      updateNoteById(selectedNoteId, updater);
+    },
+    [selectedNoteId, updateNoteById],
   );
 
   const overwriteActiveFile = useCallback(
-    (nextContent: string): boolean => {
-      if (!selectedNoteId) {
+    (fileId: string, nextContent: string): boolean => {
+      if (!notes.some((note) => note.id === fileId)) {
         return false;
       }
 
-      updateSelectedNote((note) => ({
+      updateNoteById(fileId, (note) => ({
         ...note,
         content: [nextContent],
         subtitle: getNoteSubtitle(nextContent),
       }));
       return true;
     },
-    [selectedNoteId, updateSelectedNote],
+    [notes, updateNoteById],
   );
 
   const appendToActiveFile = useCallback(
-    (appendContent: string): boolean => {
-      if (!selectedNoteId) {
+    (fileId: string, appendContent: string): boolean => {
+      if (!notes.some((note) => note.id === fileId)) {
         return false;
       }
 
-      const nextValue = `${selectedNoteContent}${appendContent}`;
-      updateSelectedNote((note) => ({
-        ...note,
-        content: [nextValue],
-        subtitle: getNoteSubtitle(nextValue),
-      }));
+      updateNoteById(fileId, (note) => {
+        const currentValue = note.content.join("\n\n");
+        const nextValue = `${currentValue}${appendContent}`;
+
+        return {
+          ...note,
+          content: [nextValue],
+          subtitle: getNoteSubtitle(nextValue),
+        };
+      });
       return true;
     },
-    [selectedNoteContent, selectedNoteId, updateSelectedNote],
+    [notes, updateNoteById],
   );
 
   const replaceInActiveFile = useCallback(
-    (find: string, replaceWith: string): number => {
-      if (!selectedNoteId || !find) {
+    (fileId: string, find: string, replaceWith: string): number => {
+      if (!find) {
         return 0;
       }
 
-      const parts = selectedNoteContent.split(find);
+      const targetNote = notes.find((note) => note.id === fileId);
+      if (!targetNote) {
+        return 0;
+      }
+
+      const currentValue = targetNote.content.join("\n\n");
+      const parts = currentValue.split(find);
       const replacementCount = Math.max(parts.length - 1, 0);
       if (replacementCount === 0) {
         return 0;
       }
 
       const nextValue = parts.join(replaceWith);
-      updateSelectedNote((note) => ({
-        ...note,
-        content: [nextValue],
-        subtitle: getNoteSubtitle(nextValue),
-      }));
+
+      updateNoteById(fileId, (note) => {
+        return {
+          ...note,
+          content: [nextValue],
+          subtitle: getNoteSubtitle(nextValue),
+        };
+      });
+
       return replacementCount;
     },
-    [selectedNoteContent, selectedNoteId, updateSelectedNote],
+    [notes, updateNoteById],
   );
 
   const navigatePalette = useCallback(

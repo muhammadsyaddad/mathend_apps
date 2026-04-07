@@ -9,10 +9,47 @@ type LiveChatRequest = {
   accessToken: string;
   message: string;
   modelOverride?: string;
+  workspace?: {
+    fileTitle: string;
+    fileContent: string;
+  };
   history?: Array<{
     role: "user" | "assistant";
     content: string;
   }>;
+};
+
+const MAX_WORKSPACE_PROMPT_CHARS = 12000;
+
+const buildSystemPrompt = (workspace?: {
+  fileTitle: string;
+  fileContent: string;
+}): string => {
+  const instructions = [
+    "You are an IDE-style assistant for Mathend notes workspace.",
+    "Always reply as valid JSON only (no markdown fence) with this exact shape:",
+    '{"reply":"string","workspaceActions":[{"kind":"write","content":"string"}|{"kind":"append","content":"string"}|{"kind":"replace","find":"string","replaceWith":"string"}]}',
+    "If user does not ask to edit file content, return workspaceActions as [].",
+    "If user asks to rewrite or generate complete note, prefer one write action with full final content.",
+    "Keep reply concise and actionable.",
+  ];
+
+  if (!workspace) {
+    return instructions.join("\n");
+  }
+
+  const trimmedContent = workspace.fileContent.slice(
+    0,
+    MAX_WORKSPACE_PROMPT_CHARS,
+  );
+
+  return [
+    ...instructions,
+    "Active file context:",
+    `<file title=\"${workspace.fileTitle}\">`,
+    trimmedContent,
+    "</file>",
+  ].join("\n");
 };
 
 const resolveModel = (
@@ -80,6 +117,10 @@ const requestOpenAICompatible = async (
   accessToken: string,
   message: string,
   modelOverride?: string,
+  workspace?: {
+    fileTitle: string;
+    fileContent: string;
+  },
   history?: Array<{
     role: "user" | "assistant";
     content: string;
@@ -109,8 +150,7 @@ const requestOpenAICompatible = async (
       messages: [
         {
           role: "system",
-          content:
-            "You are a concise math assistant. Give clear, structured reasoning.",
+          content: buildSystemPrompt(workspace),
         },
         ...(history ?? []).map((item) => ({
           role: item.role,
@@ -145,6 +185,10 @@ const requestClaudeCompatible = async (
   accessToken: string,
   message: string,
   modelOverride?: string,
+  workspace?: {
+    fileTitle: string;
+    fileContent: string;
+  },
   history?: Array<{
     role: "user" | "assistant";
     content: string;
@@ -182,8 +226,7 @@ const requestClaudeCompatible = async (
           content: message,
         },
       ],
-      system:
-        "You are a concise math assistant. Give clear, structured reasoning.",
+      system: buildSystemPrompt(workspace),
     }),
     cache: "no-store",
   });
@@ -207,6 +250,7 @@ export const requestAgentLiveChat = async ({
   accessToken,
   message,
   modelOverride,
+  workspace,
   history,
 }: LiveChatRequest): Promise<string | null> => {
   const config = getAgentProviderChatRuntimeConfig(providerId);
@@ -221,6 +265,7 @@ export const requestAgentLiveChat = async ({
       accessToken,
       message,
       modelOverride,
+      workspace,
       history,
     );
   }
@@ -231,6 +276,7 @@ export const requestAgentLiveChat = async ({
     accessToken,
     message,
     modelOverride,
+    workspace,
     history,
   );
 };

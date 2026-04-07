@@ -1,7 +1,7 @@
 export const AGENT_PROVIDER_CATALOG = [
   {
     id: "github-copilot",
-    label: "Codex GitHub Copilot",
+    label: "GitHub Copilot",
   },
   {
     id: "claude-code",

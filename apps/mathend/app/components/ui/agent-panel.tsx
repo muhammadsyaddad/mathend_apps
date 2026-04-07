@@ -21,9 +21,13 @@ type AgentPanelProps = {
   isOpen: boolean;
   onClose: () => void;
   activeFile: AgentWorkspaceFile | null;
-  onOverwriteActiveFile: (nextContent: string) => boolean;
-  onAppendToActiveFile: (appendContent: string) => boolean;
-  onReplaceInActiveFile: (find: string, replaceWith: string) => number;
+  onOverwriteActiveFile: (fileId: string, nextContent: string) => boolean;
+  onAppendToActiveFile: (fileId: string, appendContent: string) => boolean;
+  onReplaceInActiveFile: (
+    fileId: string,
+    find: string,
+    replaceWith: string,
+  ) => number;
 };
 
 type AgentWorkspaceFile = {
@@ -45,6 +49,7 @@ type AgentProvider = {
   label: string;
   configured: boolean;
   connected: boolean;
+  chatReady?: boolean;
   connection?: ProviderConnection;
 };
 
@@ -112,6 +117,40 @@ type WorkspaceCommandSuggestion = {
   insertText: string;
   cursorOffset?: number;
 };
+
+type AgentModelOption = {
+  label: string;
+  value: string;
+};
+
+type AgentModelListResponse = {
+  models?: AgentModelOption[];
+  error?: string;
+};
+
+type AgentWorkspaceAction =
+  | {
+      kind: "write";
+      content: string;
+    }
+  | {
+      kind: "append";
+      content: string;
+    }
+  | {
+      kind: "replace";
+      find: string;
+      replaceWith: string;
+    };
+
+type AgentChatResponse = {
+  providerLabel?: string;
+  message?: string;
+  workspaceActions?: AgentWorkspaceAction[];
+  error?: string;
+};
+
+const GITHUB_PROVIDER_ID = "github-copilot";
 
 const WORKSPACE_TOOL_LABEL = "Workspace Tool";
 const FALLBACK_FILE_SESSION_ID = "__no_file__";
@@ -234,7 +273,7 @@ const WORKSPACE_COMMAND_SUGGESTIONS: WorkspaceCommandSuggestion[] = [
   },
 ];
 
-const GITHUB_MODEL_OPTIONS = [
+const GITHUB_MODEL_FALLBACK_OPTIONS: AgentModelOption[] = [
   {
     label: "GPT-4o mini",
     value: "openai/gpt-4o-mini",
@@ -255,7 +294,10 @@ const GITHUB_MODEL_OPTIONS = [
     label: "gpt-5-chat",
     value: "openai/gpt-5-chat",
   },
-] as const;
+];
+
+const DEFAULT_GITHUB_MODEL =
+  GITHUB_MODEL_FALLBACK_OPTIONS[0]?.value ?? "openai/gpt-4o-mini";
 
 const createMessageId = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -303,9 +345,15 @@ export default function AgentPanel({
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
   const [pendingDeviceAuth, setPendingDeviceAuth] =
     useState<PendingDeviceAuth | null>(null);
-  const [selectedGithubModel, setSelectedGithubModel] = useState<string>(
-    GITHUB_MODEL_OPTIONS[0].value,
+  const [githubModelOptions, setGithubModelOptions] = useState<
+    AgentModelOption[]
+  >(GITHUB_MODEL_FALLBACK_OPTIONS);
+  const [isLoadingGithubModels, setIsLoadingGithubModels] = useState(false);
+  const [githubModelsError, setGithubModelsError] = useState<string | null>(
+    null,
   );
+  const [selectedGithubModel, setSelectedGithubModel] =
+    useState<string>(DEFAULT_GITHUB_MODEL);
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const providerMenuRef = useRef<HTMLDivElement | null>(null);
   const devicePollTimerRef = useRef<number | null>(null);
@@ -351,6 +399,7 @@ export default function AgentPanel({
     () => providers.find((provider) => provider.id === selectedProviderId),
     [providers, selectedProviderId],
   );
+  const isGithubProviderSelected = selectedProvider?.id === GITHUB_PROVIDER_ID;
 
   const filteredWorkspaceSuggestions = useMemo(() => {
     const query = commandQuery.trim().toLowerCase();
@@ -462,6 +511,55 @@ export default function AgentPanel({
     }
   }, []);
 
+  const loadGithubModels = useCallback(async () => {
+    setIsLoadingGithubModels(true);
+    setGithubModelsError(null);
+
+    try {
+      const response = await fetch(
+        "/api/agent/models?providerId=github-copilot",
+        {
+          cache: "no-store",
+        },
+      );
+      const payload = (await response.json()) as AgentModelListResponse;
+
+      if (!response.ok || !payload.models || payload.models.length === 0) {
+        throw new Error(payload.error ?? "Failed to fetch GitHub model list.");
+      }
+
+      setGithubModelOptions(payload.models);
+      setSelectedGithubModel((previous) => {
+        if (payload.models?.some((model) => model.value === previous)) {
+          return previous;
+        }
+        return payload.models?.[0]?.value ?? previous;
+      });
+      if (payload.error) {
+        setGithubModelsError(payload.error);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch GitHub model list.";
+      setGithubModelsError(message);
+      setGithubModelOptions(GITHUB_MODEL_FALLBACK_OPTIONS);
+      setSelectedGithubModel((previous) => {
+        if (
+          GITHUB_MODEL_FALLBACK_OPTIONS.some(
+            (model) => model.value === previous,
+          )
+        ) {
+          return previous;
+        }
+        return GITHUB_MODEL_FALLBACK_OPTIONS[0]?.value ?? previous;
+      });
+    } finally {
+      setIsLoadingGithubModels(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -469,6 +567,14 @@ export default function AgentPanel({
 
     void loadProviders();
   }, [isOpen, loadProviders]);
+
+  useEffect(() => {
+    if (!isOpen || !isGithubProviderSelected) {
+      return;
+    }
+
+    void loadGithubModels();
+  }, [isGithubProviderSelected, isOpen, loadGithubModels]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -739,8 +845,57 @@ export default function AgentPanel({
     }
   };
 
+  const applyWorkspaceActions = (
+    fileId: string,
+    fileLabel: string,
+    actions: AgentWorkspaceAction[],
+  ): string[] => {
+    const results: string[] = [];
+
+    for (const action of actions) {
+      if (action.kind === "write") {
+        const didWrite = onOverwriteActiveFile(fileId, action.content);
+        results.push(
+          didWrite
+            ? `Wrote ${action.content.length} characters to ${fileLabel}.`
+            : `Failed to write ${fileLabel}.`,
+        );
+        continue;
+      }
+
+      if (action.kind === "append") {
+        const didAppend = onAppendToActiveFile(fileId, action.content);
+        results.push(
+          didAppend
+            ? `Appended ${action.content.length} characters to ${fileLabel}.`
+            : `Failed to append content to ${fileLabel}.`,
+        );
+        continue;
+      }
+
+      if (!action.find) {
+        results.push("Skipped replace action because find text is empty.");
+        continue;
+      }
+
+      const replacementCount = onReplaceInActiveFile(
+        fileId,
+        action.find,
+        action.replaceWith,
+      );
+      results.push(
+        replacementCount > 0
+          ? `Updated ${fileLabel}. Replaced ${replacementCount} occurrence(s).`
+          : `No match for "${action.find}" in ${fileLabel}.`,
+      );
+    }
+
+    return results;
+  };
+
   const sendMessage = async () => {
     const sessionId = currentSessionId;
+    const activeSessionFile = activeFile?.id === sessionId ? activeFile : null;
     const sessionMessages = messagesBySession[sessionId] ?? [];
 
     const content = draftMessage.trim();
@@ -763,30 +918,36 @@ export default function AgentPanel({
       let responseText = "";
       if (workspaceCommand.kind === "help") {
         responseText = getWorkspaceHelpText();
-      } else if (!activeFile) {
+      } else if (!activeSessionFile) {
         responseText =
           "No active file. Select a note tab first, then run workspace commands.";
       } else {
         switch (workspaceCommand.kind) {
           case "read": {
             responseText = [
-              `Reading ${activeFile.title}:`,
+              `Reading ${activeSessionFile.title}:`,
               "",
-              activeFile.content || "(File is empty)",
+              activeSessionFile.content || "(File is empty)",
             ].join("\n");
             break;
           }
           case "write": {
-            const didWrite = onOverwriteActiveFile(workspaceCommand.content);
+            const didWrite = onOverwriteActiveFile(
+              activeSessionFile.id,
+              workspaceCommand.content,
+            );
             responseText = didWrite
-              ? `Wrote ${workspaceCommand.content.length} characters to ${activeFile.title}.`
+              ? `Wrote ${workspaceCommand.content.length} characters to ${activeSessionFile.title}.`
               : "Failed to write file content.";
             break;
           }
           case "append": {
-            const didAppend = onAppendToActiveFile(workspaceCommand.content);
+            const didAppend = onAppendToActiveFile(
+              activeSessionFile.id,
+              workspaceCommand.content,
+            );
             responseText = didAppend
-              ? `Appended ${workspaceCommand.content.length} characters to ${activeFile.title}.`
+              ? `Appended ${workspaceCommand.content.length} characters to ${activeSessionFile.title}.`
               : "Failed to append content.";
             break;
           }
@@ -798,13 +959,14 @@ export default function AgentPanel({
             }
 
             const replacementCount = onReplaceInActiveFile(
+              activeSessionFile.id,
               workspaceCommand.find,
               workspaceCommand.replaceWith,
             );
             responseText =
               replacementCount > 0
-                ? `Updated ${activeFile.title}. Replaced ${replacementCount} occurrence(s).`
-                : `No match for "${workspaceCommand.find}" in ${activeFile.title}.`;
+                ? `Updated ${activeSessionFile.title}. Replaced ${replacementCount} occurrence(s).`
+                : `No match for "${workspaceCommand.find}" in ${activeSessionFile.title}.`;
             break;
           }
         }
@@ -827,8 +989,10 @@ export default function AgentPanel({
       return;
     }
 
-    if (!selectedProvider.connected) {
-      setChatError("Connect provider via OAuth before chatting.");
+    if (!selectedProvider.chatReady) {
+      setChatError(
+        "Provider belum siap chat. Connect OAuth dulu, atau set server token jika tersedia.",
+      );
       return;
     }
 
@@ -866,27 +1030,45 @@ export default function AgentPanel({
           message: content,
           history,
           sessionId,
-          model:
-            selectedProvider.id === "github-copilot"
-              ? selectedGithubModel
-              : undefined,
+          workspace: activeSessionFile
+            ? {
+                title: activeSessionFile.title,
+                content: activeSessionFile.content,
+              }
+            : undefined,
+          model: isGithubProviderSelected ? selectedGithubModel : undefined,
         }),
       });
-      const payload = (await response.json()) as {
-        providerLabel?: string;
-        message?: string;
-        error?: string;
-      };
+      const payload = (await response.json()) as AgentChatResponse;
 
-      if (!response.ok || !payload.message) {
+      if (
+        !response.ok ||
+        (!payload.message && (payload.workspaceActions?.length ?? 0) === 0)
+      ) {
         throw new Error(payload.error ?? "Failed to send message.");
       }
+
+      const assistantContent = payload.message ?? "Workspace updated.";
+      const returnedActions = payload.workspaceActions ?? [];
+      const actionNotes =
+        returnedActions.length > 0
+          ? sessionId === FALLBACK_FILE_SESSION_ID
+            ? ["No active file in this session. Workspace actions skipped."]
+            : applyWorkspaceActions(
+                sessionId,
+                activeSessionFile?.title ?? `file ${sessionId}`,
+                returnedActions,
+              )
+          : [];
 
       const assistantMessage: AgentChatMessage = {
         id: createMessageId(),
         role: "assistant",
         providerLabel: payload.providerLabel ?? selectedProvider.label,
-        content: payload.message,
+        content:
+          actionNotes.length > 0
+            ? `${assistantContent}\n\n${actionNotes.join("\n")}`
+            : assistantContent,
       };
 
       appendSessionMessage(sessionId, assistantMessage);
@@ -1108,7 +1290,9 @@ export default function AgentPanel({
             <div className="agent-section-head">
               <span className="agent-section-title">Chat</span>
               <span className="agent-chat-provider-pill">
-                {selectedProvider?.label ?? "No provider"}
+                {selectedProvider
+                  ? `Provider: ${selectedProvider.label}`
+                  : "Provider: No provider"}
               </span>
             </div>
 
@@ -1245,8 +1429,11 @@ export default function AgentPanel({
                 </button>
               </div>
 
-              {selectedProvider?.id === "github-copilot" && (
+              {isGithubProviderSelected && (
                 <div className="agent-model-row">
+                  <span className="agent-model-label">
+                    Model (via GitHub Models)
+                  </span>
                   <select
                     id="github-model"
                     className="agent-model-select"
@@ -1255,13 +1442,20 @@ export default function AgentPanel({
                       setSelectedGithubModel(event.target.value)
                     }
                   >
-                    {GITHUB_MODEL_OPTIONS.map((model) => (
+                    {githubModelOptions.map((model: AgentModelOption) => (
                       <option key={model.value} value={model.value}>
                         {model.label}
                       </option>
                     ))}
                   </select>
+                  {isLoadingGithubModels && (
+                    <span className="agent-model-hint">Loading...</span>
+                  )}
                 </div>
+              )}
+
+              {isGithubProviderSelected && githubModelsError && (
+                <p className="agent-inline-error">{githubModelsError}</p>
               )}
             </div>
           </div>

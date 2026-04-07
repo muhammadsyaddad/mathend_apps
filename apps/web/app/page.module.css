@@ -47,7 +47,6 @@
 }
 
 .hero {
-  border: 1px solid #e8e6e1;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 1.2rem;
@@ -132,7 +131,6 @@
 }
 
 .metrics p {
-  border: 1px solid #e8e6e1;
   padding: 0.45rem 0.6rem;
   font-family: var(--font-geist-mono), "Geist Mono", monospace;
   font-size: 0.66rem;
@@ -151,7 +149,6 @@
 }
 
 .imageFrame {
-  border: 1px solid #e8e6e1;
   min-height: 24rem;
 }
 
@@ -195,29 +192,30 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1.1rem;
   padding-bottom: 0;
 }
 
 .sectionTitle {
+  margin-left: auto;
   font-family: var(--font-geist-sans), "Geist", sans-serif;
   font-size: clamp(1.4rem, 2.4vw, 2rem);
   line-height: 1.04;
   letter-spacing: -0.01em;
   font-weight: 700;
   max-width: 30ch;
+  text-align: right;
 }
 
 .features {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 1.5rem;
 }
 
 .feature {
-  padding: 0.9rem;
+  padding: 1.1rem;
   min-height: 11.5rem;
-  border: 1px solid #e8e6e1;
 }
 
 .featureTitle,
@@ -245,27 +243,25 @@
 .workflow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 1.5rem;
 }
 
 .step {
   min-height: 12rem;
-  padding: 0.9rem;
-  border: 1px solid #e8e6e1;
+  padding: 1.1rem;
 }
 
 .pricingGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 1.5rem;
 }
 
 .plan {
   min-height: 21rem;
-  padding: 0.9rem;
+  padding: 1.1rem;
   display: flex;
   flex-direction: column;
-  border: 1px solid #e8e6e1;
 }
 
 .planFeatured {
@@ -298,7 +294,6 @@
 }
 
 .planFeatures li {
-  border-top: 1px solid #e8e6e1;
   padding-top: 0.35rem;
   font-family: var(--font-geist-mono), "Geist Mono", monospace;
   font-size: 0.66rem;
@@ -314,18 +309,16 @@
 .faqList {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
+  gap: 1.5rem;
 }
 
 .faqItem {
   min-height: 10rem;
-  padding: 0.9rem;
-  border: 1px solid #e8e6e1;
+  padding: 1.1rem;
 }
 
 .finalCta {
   margin-top: 0.9rem;
-  border: 1px solid #e8e6e1;
   padding: 1rem;
 }
 
@@ -415,6 +408,11 @@
   .sectionHead {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .sectionTitle {
+    margin-left: 0;
+    text-align: left;
   }
 
   .actions {

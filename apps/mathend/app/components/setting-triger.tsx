@@ -14,9 +14,13 @@ type AgentActiveFile = {
 
 type SettingsTriggerProps = {
   activeFile: AgentActiveFile | null;
-  onOverwriteActiveFile: (nextContent: string) => boolean;
-  onAppendToActiveFile: (appendContent: string) => boolean;
-  onReplaceInActiveFile: (find: string, replaceWith: string) => number;
+  onOverwriteActiveFile: (fileId: string, nextContent: string) => boolean;
+  onAppendToActiveFile: (fileId: string, appendContent: string) => boolean;
+  onReplaceInActiveFile: (
+    fileId: string,
+    find: string,
+    replaceWith: string,
+  ) => number;
 };
 
 export default function SettingsTrigger({
