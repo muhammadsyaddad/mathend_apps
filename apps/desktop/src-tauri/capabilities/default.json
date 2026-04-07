@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for Mathend desktop",
+  "windows": ["main"],
+  "permissions": ["core:default", "opener:default", "sql:default"]
+}

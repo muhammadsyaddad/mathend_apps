@@ -3,6 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExportModal, type ExportFormat } from "./components/export-modal";
 import SettingsTrigger from "./components/setting-triger";
+import {
+  initNoteDb,
+  loadAppStateFromDb,
+  loadNotesFromDb,
+  saveAppStateToDb,
+  saveNotesToDb,
+  type NoteRecord,
+} from "./lib/note-db";
+
+const typstRuntimeModule = "@myriaddreamin/typst-all-in-one.ts";
 
 type TypstRuntime = {
   svg: (options: { mainContent: string }) => Promise<string>;
@@ -375,11 +385,6 @@ const commands: CommandItem[] = [
 
 const LONG_PRESS_DURATION_MS = 430;
 
-const STORAGE_NOTES_KEY = "mathend.notes.v1";
-const STORAGE_SELECTED_NOTE_KEY = "mathend.selected-note.v1";
-const STORAGE_SIDEBAR_COLLAPSED_KEY = "mathend.sidebar-collapsed.v1";
-const STORAGE_OPEN_TABS_KEY = "mathend.open-tabs.v1";
-
 const getNoteSubtitle = (content: string): string =>
   content.replace(/\s+/g, " ").trim().slice(0, 42);
 
@@ -398,6 +403,25 @@ const getModifiedLabel = (timestamp: number): string => {
     day: "numeric",
   });
 };
+
+const toNoteItem = (record: NoteRecord): NoteItem => ({
+  id: record.id,
+  title: record.title,
+  subtitle: record.subtitle,
+  category: record.category,
+  modifiedAt: record.modifiedAt,
+  modifiedLabel: getModifiedLabel(record.modifiedAt),
+  content: [record.content],
+});
+
+const toNoteRecord = (note: NoteItem): NoteRecord => ({
+  id: note.id,
+  title: note.title,
+  subtitle: note.subtitle,
+  category: note.category,
+  modifiedAt: note.modifiedAt,
+  content: note.content.join("\n\n"),
+});
 
 const escapeTypstText = (value: string): string => {
   return value
@@ -711,6 +735,8 @@ export default function Home() {
   const compileTimerRef = useRef<number | null>(null);
   const didInitPersistRef = useRef(false);
   const suppressAutoSaveToastRef = useRef(false);
+  const isLoadingFromDbRef = useRef(true);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const [notes, setNotes] = useState<NoteItem[]>(initialNotes);
   const [selectedNoteId, setSelectedNoteId] = useState(
@@ -758,17 +784,6 @@ export default function Home() {
     notes[0];
 
   const selectedNoteContent = selectedNote?.content.join("\n\n") ?? "";
-  const activeAgentFile = useMemo(() => {
-    if (!selectedNote) {
-      return null;
-    }
-
-    return {
-      id: selectedNote.id,
-      title: selectedNote.title,
-      content: selectedNote.content.join("\n\n"),
-    };
-  }, [selectedNote]);
 
   const openTabs = useMemo(
     () =>
@@ -994,62 +1009,6 @@ export default function Home() {
       );
     },
     [selectedNoteId],
-  );
-
-  const overwriteActiveFile = useCallback(
-    (nextContent: string): boolean => {
-      if (!selectedNoteId) {
-        return false;
-      }
-
-      updateSelectedNote((note) => ({
-        ...note,
-        content: [nextContent],
-        subtitle: getNoteSubtitle(nextContent),
-      }));
-      return true;
-    },
-    [selectedNoteId, updateSelectedNote],
-  );
-
-  const appendToActiveFile = useCallback(
-    (appendContent: string): boolean => {
-      if (!selectedNoteId) {
-        return false;
-      }
-
-      const nextValue = `${selectedNoteContent}${appendContent}`;
-      updateSelectedNote((note) => ({
-        ...note,
-        content: [nextValue],
-        subtitle: getNoteSubtitle(nextValue),
-      }));
-      return true;
-    },
-    [selectedNoteContent, selectedNoteId, updateSelectedNote],
-  );
-
-  const replaceInActiveFile = useCallback(
-    (find: string, replaceWith: string): number => {
-      if (!selectedNoteId || !find) {
-        return 0;
-      }
-
-      const parts = selectedNoteContent.split(find);
-      const replacementCount = Math.max(parts.length - 1, 0);
-      if (replacementCount === 0) {
-        return 0;
-      }
-
-      const nextValue = parts.join(replaceWith);
-      updateSelectedNote((note) => ({
-        ...note,
-        content: [nextValue],
-        subtitle: getNoteSubtitle(nextValue),
-      }));
-      return replacementCount;
-    },
-    [selectedNoteContent, selectedNoteId, updateSelectedNote],
   );
 
   const navigatePalette = useCallback(
@@ -1359,65 +1318,63 @@ export default function Home() {
   };
 
   useEffect(() => {
-    try {
-      const rawNotes = window.localStorage.getItem(STORAGE_NOTES_KEY);
-      const rawSelectedNote = window.localStorage.getItem(
-        STORAGE_SELECTED_NOTE_KEY,
-      );
-      const rawSidebarCollapsed = window.localStorage.getItem(
-        STORAGE_SIDEBAR_COLLAPSED_KEY,
-      );
-      const rawOpenTabs = window.localStorage.getItem(STORAGE_OPEN_TABS_KEY);
+    let isCancelled = false;
 
-      if (rawNotes) {
-        const parsed = JSON.parse(rawNotes) as unknown;
-        if (Array.isArray(parsed)) {
-          const validNotes = parsed.filter((item) => {
-            if (typeof item !== "object" || item === null) {
-              return false;
-            }
-            const candidate = item as Partial<NoteItem>;
-            return (
-              typeof candidate.id === "string" &&
-              typeof candidate.title === "string" &&
-              typeof candidate.subtitle === "string" &&
-              typeof candidate.modifiedLabel === "string" &&
-              typeof candidate.modifiedAt === "number" &&
-              Array.isArray(candidate.content)
-            );
-          }) as NoteItem[];
+    const hydrateFromDb = async () => {
+      try {
+        await initNoteDb();
+        const [noteRecords, appState] = await Promise.all([
+          loadNotesFromDb(),
+          loadAppStateFromDb(),
+        ]);
 
-          if (validNotes.length === parsed.length) {
-            setNotes(validNotes);
-            if (!rawSelectedNote) {
-              setSelectedNoteId(validNotes[0]?.id ?? "");
-            }
-          }
+        if (isCancelled) {
+          return;
         }
-      }
 
-      if (rawSelectedNote) {
-        setSelectedNoteId(rawSelectedNote);
-      }
+        const nextNotes =
+          noteRecords.length > 0 ? noteRecords.map(toNoteItem) : initialNotes;
+        const noteIds = new Set(nextNotes.map((note) => note.id));
 
-      if (rawSidebarCollapsed === "false") {
+        const selectedFromState =
+          appState.selectedNoteId && noteIds.has(appState.selectedNoteId)
+            ? appState.selectedNoteId
+            : (nextNotes[0]?.id ?? "");
+
+        const tabsFromState = appState.openTabIds.filter((id) =>
+          noteIds.has(id),
+        );
+        const nextOpenTabs =
+          tabsFromState.length > 0
+            ? tabsFromState
+            : nextNotes.slice(0, 2).map((note) => note.id);
+
+        setNotes(nextNotes);
+        setSelectedNoteId(selectedFromState);
+        setOpenTabIds(nextOpenTabs);
+        setIsSidebarCollapsed(appState.sidebarCollapsed);
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+
+        setNotes(initialNotes);
+        setSelectedNoteId(initialNotes[0]?.id ?? "");
+        setOpenTabIds(initialNotes.slice(0, 2).map((note) => note.id));
         setIsSidebarCollapsed(false);
-      }
-      if (rawOpenTabs) {
-        const parsedTabs = JSON.parse(rawOpenTabs) as unknown;
-        if (
-          Array.isArray(parsedTabs) &&
-          parsedTabs.every((id) => typeof id === "string")
-        ) {
-          setOpenTabIds(parsedTabs);
+      } finally {
+        if (!isCancelled) {
+          isLoadingFromDbRef.current = false;
+          setIsHydratedFromStorage(true);
         }
       }
-    } catch {
-      setNotes(initialNotes);
-      setOpenTabIds(initialNotes.slice(0, 2).map((note) => note.id));
-    } finally {
-      setIsHydratedFromStorage(true);
-    }
+    };
+
+    void hydrateFromDb();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1432,21 +1389,24 @@ export default function Home() {
   }, [notes, selectedNoteId]);
 
   useEffect(() => {
-    const noteIds = new Set(notes.map((note) => note.id));
+    if (!isHydratedFromStorage) {
+      return;
+    }
+
+    const existingIds = new Set(notes.map((note) => note.id));
     setOpenTabIds((previous) => {
-      const filtered = previous.filter((id) => noteIds.has(id));
+      const filtered = previous.filter((id) => existingIds.has(id));
       if (filtered.length > 0) {
         return filtered;
       }
-      const fallback =
-        selectedNoteId && noteIds.has(selectedNoteId)
-          ? [selectedNoteId]
-          : notes[0]?.id
-            ? [notes[0].id]
-            : [];
-      return fallback;
+
+      const fallbackId =
+        selectedNoteId && existingIds.has(selectedNoteId)
+          ? selectedNoteId
+          : notes[0]?.id;
+      return fallbackId ? [fallbackId] : [];
     });
-  }, [notes, selectedNoteId]);
+  }, [isHydratedFromStorage, notes, selectedNoteId]);
 
   useEffect(() => {
     if (!isHydratedFromStorage) {
@@ -1458,16 +1418,22 @@ export default function Home() {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_NOTES_KEY, JSON.stringify(notes));
-    window.localStorage.setItem(STORAGE_SELECTED_NOTE_KEY, selectedNoteId);
-    window.localStorage.setItem(
-      STORAGE_SIDEBAR_COLLAPSED_KEY,
-      isSidebarCollapsed ? "true" : "false",
-    );
-    window.localStorage.setItem(
-      STORAGE_OPEN_TABS_KEY,
-      JSON.stringify(openTabIds),
-    );
+    if (!isLoadingFromDbRef.current) {
+      const noteRecords = notes.map(toNoteRecord);
+      const appState = {
+        selectedNoteId: selectedNoteId || null,
+        sidebarCollapsed: isSidebarCollapsed,
+        openTabIds,
+      };
+      saveQueueRef.current = saveQueueRef.current
+        .then(async () => {
+          await Promise.all([
+            saveNotesToDb(noteRecords),
+            saveAppStateToDb(appState),
+          ]);
+        })
+        .catch(() => undefined);
+    }
 
     if (!suppressAutoSaveToastRef.current) {
       setSaveToastMessage("Auto-saved");
@@ -1510,7 +1476,7 @@ export default function Home() {
     setIsTypstRuntimeLoading(true);
     let isCancelled = false;
 
-    void import("@myriaddreamin/typst-all-in-one.ts")
+    void import(/* @vite-ignore */ typstRuntimeModule)
       .then(() => {
         if (isCancelled) {
           return;
@@ -1780,7 +1746,7 @@ export default function Home() {
         </div>
 
         <div className="sidebar-content">
-          <div className="recent-label"> Notes</div>
+          <div className="recent-label">Openable Notes</div>
           <div className="notes-list">
             {visibleNotes.map((note) => (
               <button
@@ -1788,7 +1754,7 @@ export default function Home() {
                 type="button"
                 className={
                   note.id === selectedNote?.id
-                    ? "note-card note-card-button"
+                    ? "note-card note-card-active note-card-button"
                     : "note-card note-card-button"
                 }
                 onClick={() => {
@@ -1836,12 +1802,7 @@ export default function Home() {
             )}
           </div>
         </div>
-        <SettingsTrigger
-          activeFile={activeAgentFile}
-          onOverwriteActiveFile={overwriteActiveFile}
-          onAppendToActiveFile={appendToActiveFile}
-          onReplaceInActiveFile={replaceInActiveFile}
-        />
+        <SettingsTrigger />
       </aside>
 
       <main className="editor-canvas">

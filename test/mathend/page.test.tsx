@@ -34,7 +34,7 @@ describe("mathend home page", () => {
       },
     });
 
-    expect(textarea.value).toBe("Integral practice set");
+    expect(textarea).toBe("Integral practice set");
   });
 
   it("filters notes by search query", async () => {
@@ -69,7 +69,7 @@ describe("mathend home page", () => {
     fireEvent.keyDown(textarea, { key: "Enter" });
 
     await waitFor(() => {
-      expect(textarea.value).toBe("calc √() ");
+      expect(textarea).toBe("calc √() ");
     });
   });
 });

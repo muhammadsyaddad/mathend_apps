@@ -4,6 +4,9 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run --filter mathend dev",
+    "dev:desktop": "turbo run --filter desktop dev",
+    "tauri:dev": "bun run --filter desktop tauri:dev",
+    "tauri:build": "bun run --filter desktop tauri:build",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",

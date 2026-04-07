@@ -104,6 +104,15 @@ type WorkspaceCommand =
       kind: "help";
     };
 
+type WorkspaceCommandSuggestion = {
+  id: string;
+  shortcut: string;
+  label: string;
+  description: string;
+  insertText: string;
+  cursorOffset?: number;
+};
+
 const WORKSPACE_TOOL_LABEL = "Workspace Tool";
 const FALLBACK_FILE_SESSION_ID = "__no_file__";
 const EMPTY_SESSION_MESSAGES: AgentChatMessage[] = [];
@@ -186,6 +195,45 @@ const getWorkspaceHelpText = (): string => {
   ].join("\n");
 };
 
+const WORKSPACE_COMMAND_SUGGESTIONS: WorkspaceCommandSuggestion[] = [
+  {
+    id: "ws-read",
+    shortcut: "/read",
+    label: "Read active file",
+    description: "Show content from the selected file session",
+    insertText: "/read",
+  },
+  {
+    id: "ws-write",
+    shortcut: "/write",
+    label: "Write content",
+    description: "Replace all content in the selected file",
+    insertText: "/write ",
+  },
+  {
+    id: "ws-append",
+    shortcut: "/append",
+    label: "Append content",
+    description: "Add text to the end of selected file",
+    insertText: "/append ",
+  },
+  {
+    id: "ws-replace",
+    shortcut: "/replace",
+    label: "Replace text",
+    description: "Replace all matches using find and replace",
+    insertText: "/replace  => ",
+    cursorOffset: 4,
+  },
+  {
+    id: "ws-help",
+    shortcut: "/help",
+    label: "Command help",
+    description: "Show available workspace commands",
+    insertText: "/help",
+  },
+];
+
 const GITHUB_MODEL_OPTIONS = [
   {
     label: "GPT-4o mini",
@@ -249,6 +297,9 @@ export default function AgentPanel({
   );
   const [chatError, setChatError] = useState<string | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
   const [pendingDeviceAuth, setPendingDeviceAuth] =
     useState<PendingDeviceAuth | null>(null);
@@ -258,6 +309,7 @@ export default function AgentPanel({
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const providerMenuRef = useRef<HTMLDivElement | null>(null);
   const devicePollTimerRef = useRef<number | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   const currentSessionId = activeFile?.id ?? FALLBACK_FILE_SESSION_ID;
   const messages = useMemo(
@@ -298,6 +350,77 @@ export default function AgentPanel({
   const selectedProvider = useMemo(
     () => providers.find((provider) => provider.id === selectedProviderId),
     [providers, selectedProviderId],
+  );
+
+  const filteredWorkspaceSuggestions = useMemo(() => {
+    const query = commandQuery.trim().toLowerCase();
+    if (!query) {
+      return WORKSPACE_COMMAND_SUGGESTIONS;
+    }
+
+    return WORKSPACE_COMMAND_SUGGESTIONS.filter((item) => {
+      return (
+        item.shortcut.slice(1).toLowerCase().includes(query) ||
+        item.label.toLowerCase().includes(query)
+      );
+    });
+  }, [commandQuery]);
+
+  const evaluateSlashComposerTrigger = useCallback(
+    (value: string, cursorPosition: number) => {
+      const beforeCursor = value.slice(0, cursorPosition);
+      const triggerMatch = beforeCursor.match(/(^|\s)\/([^\s/]*)$/);
+      if (!triggerMatch) {
+        setIsCommandMenuOpen(false);
+        setCommandQuery("");
+        setActiveCommandIndex(0);
+        return;
+      }
+
+      setCommandQuery(triggerMatch[2] ?? "");
+      setActiveCommandIndex(0);
+      setIsCommandMenuOpen(true);
+    },
+    [],
+  );
+
+  const applySlashSuggestion = useCallback(
+    (suggestion: WorkspaceCommandSuggestion) => {
+      const composer = composerRef.current;
+      if (!composer) {
+        return;
+      }
+
+      const selectionStart = composer.selectionStart ?? draftMessage.length;
+      const selectionEnd = composer.selectionEnd ?? selectionStart;
+      const beforeCursor = draftMessage.slice(0, selectionStart);
+      const triggerMatch = beforeCursor.match(/(^|\s)\/([^\s/]*)$/);
+      if (!triggerMatch || triggerMatch.index === undefined) {
+        return;
+      }
+
+      const leadingWhitespace = triggerMatch[1] ?? "";
+      const triggerStart = triggerMatch.index + leadingWhitespace.length;
+      const nextDraft =
+        draftMessage.slice(0, triggerStart) +
+        suggestion.insertText +
+        draftMessage.slice(selectionEnd);
+
+      setDraftForSession(currentSessionId, nextDraft);
+      setIsCommandMenuOpen(false);
+      setCommandQuery("");
+
+      const nextCursorPosition =
+        triggerStart +
+        suggestion.insertText.length -
+        (suggestion.cursorOffset ?? 0);
+
+      window.requestAnimationFrame(() => {
+        composer.focus();
+        composer.setSelectionRange(nextCursorPosition, nextCursorPosition);
+      });
+    },
+    [currentSessionId, draftMessage, setDraftForSession],
   );
 
   const loadProviders = useCallback(async () => {
@@ -693,6 +816,9 @@ export default function AgentPanel({
         providerLabel: WORKSPACE_TOOL_LABEL,
         content: responseText,
       });
+      setIsCommandMenuOpen(false);
+      setCommandQuery("");
+      setActiveCommandIndex(0);
       return;
     }
 
@@ -708,6 +834,9 @@ export default function AgentPanel({
 
     setChatError(null);
     setDraftForSession(sessionId, "");
+    setIsCommandMenuOpen(false);
+    setCommandQuery("");
+    setActiveCommandIndex(0);
     setIsSendingMessage(true);
 
     const userMessage: AgentChatMessage = {
@@ -773,6 +902,43 @@ export default function AgentPanel({
   const handleComposerKeyDown = (
     event: ReactKeyboardEvent<HTMLTextAreaElement>,
   ) => {
+    if (isCommandMenuOpen && filteredWorkspaceSuggestions.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveCommandIndex((current) => {
+          return current === filteredWorkspaceSuggestions.length - 1
+            ? 0
+            : current + 1;
+        });
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveCommandIndex((current) => {
+          return current === 0
+            ? filteredWorkspaceSuggestions.length - 1
+            : current - 1;
+        });
+        return;
+      }
+
+      if (event.key === "Tab" || event.key === "Enter") {
+        event.preventDefault();
+        const selected = filteredWorkspaceSuggestions[activeCommandIndex];
+        if (selected) {
+          applySlashSuggestion(selected);
+        }
+        return;
+      }
+    }
+
+    if (event.key === "Escape" && isCommandMenuOpen) {
+      event.preventDefault();
+      setIsCommandMenuOpen(false);
+      return;
+    }
+
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       void sendMessage();
@@ -953,28 +1119,6 @@ export default function AgentPanel({
               </span>
             </div>
 
-            {selectedProvider?.id === "github-copilot" && (
-              <div className="agent-model-row">
-                <label htmlFor="github-model" className="agent-model-label">
-                  Model
-                </label>
-                <select
-                  id="github-model"
-                  className="agent-model-select"
-                  value={selectedGithubModel}
-                  onChange={(event) =>
-                    setSelectedGithubModel(event.target.value)
-                  }
-                >
-                  {GITHUB_MODEL_OPTIONS.map((model) => (
-                    <option key={model.value} value={model.value}>
-                      {model.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <div className="agent-chat-thread" ref={messagesViewportRef}>
               {messages.length === 0 && (
                 <div className="agent-chat-empty">
@@ -1003,29 +1147,122 @@ export default function AgentPanel({
 
             {chatError && <p className="agent-inline-error">{chatError}</p>}
 
-            <div className="agent-chat-compose">
-              <textarea
-                className="agent-chat-input"
-                placeholder="Type prompt or /read /write /append /replace"
-                value={draftMessage}
-                onChange={(event) =>
-                  setDraftForSession(currentSessionId, event.target.value)
-                }
-                onKeyDown={handleComposerKeyDown}
-              />
-              <button
-                type="button"
-                className="agent-chat-send"
-                onClick={() => void sendMessage()}
-                disabled={isSendingMessage}
-                aria-label="Send message"
-              >
-                {isSendingMessage ? (
-                  <Loader2 size={15} className="spin" aria-hidden />
-                ) : (
-                  <SendHorizontal size={15} aria-hidden />
-                )}
-              </button>
+            <div className="agent-chat-compose-wrap">
+              {isCommandMenuOpen && (
+                <section
+                  className="agent-command-menu"
+                  aria-label="Workspace slash commands"
+                >
+                  <div className="agent-command-menu-head">
+                    Workspace commands
+                  </div>
+                  <div className="agent-command-menu-list">
+                    {filteredWorkspaceSuggestions.map((item, index) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={
+                          index === activeCommandIndex
+                            ? "agent-command-item agent-command-item-active"
+                            : "agent-command-item"
+                        }
+                        onMouseEnter={() => setActiveCommandIndex(index)}
+                        onClick={() => applySlashSuggestion(item)}
+                      >
+                        <span className="agent-command-shortcut">
+                          {item.shortcut}
+                        </span>
+                        <span className="agent-command-label">
+                          {item.label}
+                        </span>
+                        <span className="agent-command-description">
+                          {item.description}
+                        </span>
+                      </button>
+                    ))}
+                    {filteredWorkspaceSuggestions.length === 0 && (
+                      <div className="agent-command-empty">
+                        No command found.
+                      </div>
+                    )}
+                  </div>
+                  <div className="agent-command-menu-foot">
+                    Use arrow keys + Enter
+                  </div>
+                </section>
+              )}
+
+              <div className="agent-chat-compose">
+                <textarea
+                  ref={composerRef}
+                  className="agent-chat-input"
+                  placeholder="Type prompt or /read /write /append /replace"
+                  value={draftMessage}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setDraftForSession(currentSessionId, nextValue);
+                    evaluateSlashComposerTrigger(
+                      nextValue,
+                      event.target.selectionStart ?? nextValue.length,
+                    );
+                  }}
+                  onClick={(event) => {
+                    const element = event.currentTarget;
+                    evaluateSlashComposerTrigger(
+                      element.value,
+                      element.selectionStart ?? element.value.length,
+                    );
+                  }}
+                  onKeyUp={(event) => {
+                    if (
+                      event.key === "ArrowDown" ||
+                      event.key === "ArrowUp" ||
+                      event.key === "Enter" ||
+                      event.key === "Tab"
+                    ) {
+                      return;
+                    }
+                    const element = event.currentTarget;
+                    evaluateSlashComposerTrigger(
+                      element.value,
+                      element.selectionStart ?? element.value.length,
+                    );
+                  }}
+                  onKeyDown={handleComposerKeyDown}
+                />
+                <button
+                  type="button"
+                  className="agent-chat-send"
+                  onClick={() => void sendMessage()}
+                  disabled={isSendingMessage}
+                  aria-label="Send message"
+                >
+                  {isSendingMessage ? (
+                    <Loader2 size={15} className="spin" aria-hidden />
+                  ) : (
+                    <SendHorizontal size={15} aria-hidden />
+                  )}
+                </button>
+              </div>
+
+              {selectedProvider?.id === "github-copilot" && (
+                <div className="agent-model-row">
+                  <select
+                    id="github-model"
+                    className="agent-model-select"
+                    value={selectedGithubModel}
+                    onChange={(event) =>
+                      setSelectedGithubModel(event.target.value)
+                    }
+                  >
+                    {GITHUB_MODEL_OPTIONS.map((model) => (
+                      <option key={model.value} value={model.value}>
+                        {model.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         </div>

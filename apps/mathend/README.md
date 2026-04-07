@@ -6,6 +6,21 @@ Mathend adalah workspace catatan matematis dengan **Agent Panel** yang sekarang 
 - OAuth provider untuk `Claude Code AI`
 - Chat panel berbasis provider yang terhubung
 
+## Hybrid Math Writing (No-code style)
+
+Editor utama sekarang mendukung mode hybrid:
+
+- Buka command palette dengan `Ctrl+K` atau ketik `/`
+- Cari dengan kata natural (`pecahan`, `integral`, `matriks`, `teorema`, `bukti`, dll)
+- Intent parser otomatis untuk query natural (contoh: `integral 0 sampai tak hingga of e^(-x)`)
+- Pilih command via keyboard (`Arrow`, `Enter`, `Tab`, `Esc`)
+- Live panel **Paper Preview** di kanan untuk render Typst style (A4-like)
+- Export asli via Typst: `PDF` dan `PNG`
+
+Dependensi Typst runtime sudah ditambahkan:
+
+- `@myriaddreamin/typst-all-in-one.ts`
+
 ## Jalankan lokal
 
 Dari root monorepo:
