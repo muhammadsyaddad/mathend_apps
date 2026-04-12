@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import type { LicenseSessionPayload } from "./license-types";
 
 export type NoteCategory = "Calculus" | "Algebra" | "Physics" | "Thermo";
 
@@ -19,6 +20,7 @@ export type AppStateRecord = {
 
 const DB_URL = "sqlite:mathend.db";
 const APP_STATE_ID = "singleton";
+const LICENSE_STATE_ID = "singleton";
 
 const seedNotes: NoteRecord[] = [
   {
@@ -117,6 +119,13 @@ export const initNoteDb = async (): Promise<void> => {
       selected_note_id TEXT,
       sidebar_collapsed INTEGER NOT NULL DEFAULT 0,
       open_tab_ids TEXT NOT NULL DEFAULT '[]'
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS license_state (
+      id TEXT PRIMARY KEY,
+      session_json TEXT NOT NULL
     )
   `);
 
@@ -235,4 +244,72 @@ export const saveAppStateToDb = async (
       JSON.stringify(state.openTabIds),
     ],
   );
+};
+
+const parseLicenseSession = (raw: unknown): LicenseSessionPayload | null => {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<LicenseSessionPayload>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.productId !== "string" ||
+      typeof parsed.checkoutUrl !== "string" ||
+      typeof parsed.licenseKey !== "string" ||
+      typeof parsed.licenseKeyPreview !== "string" ||
+      typeof parsed.buyerEmail !== "string" ||
+      typeof parsed.saleId !== "string" ||
+      typeof parsed.activatedAt !== "string" ||
+      typeof parsed.lastVerifiedAt !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      version: 1,
+      productId: parsed.productId,
+      checkoutUrl: parsed.checkoutUrl,
+      licenseKey: parsed.licenseKey,
+      licenseKeyPreview: parsed.licenseKeyPreview,
+      buyerEmail: parsed.buyerEmail,
+      saleId: parsed.saleId,
+      activatedAt: parsed.activatedAt,
+      lastVerifiedAt: parsed.lastVerifiedAt,
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const loadLicenseSessionFromDb =
+  async (): Promise<LicenseSessionPayload | null> => {
+    const db = await getDb();
+    const rows = await db.select<
+      Array<{
+        session_json: string;
+      }>
+    >("SELECT session_json FROM license_state WHERE id = ? LIMIT 1", [
+      LICENSE_STATE_ID,
+    ]);
+
+    return parseLicenseSession(rows[0]?.session_json ?? null);
+  };
+
+export const saveLicenseSessionToDb = async (
+  payload: LicenseSessionPayload,
+): Promise<void> => {
+  const db = await getDb();
+  await db.execute(
+    "INSERT OR REPLACE INTO license_state (id, session_json) VALUES (?, ?)",
+    [LICENSE_STATE_ID, JSON.stringify(payload)],
+  );
+};
+
+export const clearLicenseSessionInDb = async (): Promise<void> => {
+  const db = await getDb();
+  await db.execute("DELETE FROM license_state WHERE id = ?", [
+    LICENSE_STATE_ID,
+  ]);
 };

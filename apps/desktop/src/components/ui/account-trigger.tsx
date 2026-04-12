@@ -3,8 +3,21 @@
 import { useState } from "react";
 import { UserRound } from "lucide-react";
 import AccountModal from "./account-modal";
+import type { LicenseStatusResponse } from "../../lib/license-types";
 
-export default function AccountTrigger() {
+type AccountTriggerProps = {
+  licenseStatus: LicenseStatusResponse | null;
+  isLoadingLicense: boolean;
+  onRefreshLicenseStatus: () => Promise<void>;
+  onDeactivateLicense: () => Promise<void>;
+};
+
+export default function AccountTrigger({
+  licenseStatus,
+  isLoadingLicense,
+  onRefreshLicenseStatus,
+  onDeactivateLicense,
+}: AccountTriggerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -21,6 +34,10 @@ export default function AccountTrigger() {
       <AccountModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        licenseStatus={licenseStatus}
+        isLoadingLicense={isLoadingLicense}
+        onRefreshLicenseStatus={onRefreshLicenseStatus}
+        onDeactivateLicense={onDeactivateLicense}
       />
     </>
   );

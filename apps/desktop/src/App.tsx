@@ -2,15 +2,30 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExportModal, type ExportFormat } from "./components/export-modal";
+import LicenseGate from "./components/license-gate";
 import SettingsTrigger from "./components/setting-triger";
 import {
+  clearLicenseSessionInDb,
   initNoteDb,
   loadAppStateFromDb,
+  loadLicenseSessionFromDb,
   loadNotesFromDb,
   saveAppStateToDb,
+  saveLicenseSessionToDb,
   saveNotesToDb,
   type NoteRecord,
 } from "./lib/note-db";
+import {
+  getDesktopLicenseRuntimeConfig,
+  isSessionReverifyDue,
+  maskLicenseKey,
+  toLicensedStatus,
+  verifyDesktopGumroadLicense,
+} from "./lib/license-runtime";
+import type {
+  LicenseSessionPayload,
+  LicenseStatusResponse,
+} from "./lib/license-types";
 
 const typstRuntimeModule = "@myriaddreamin/typst-all-in-one.ts";
 
@@ -737,6 +752,7 @@ export default function Home() {
   const suppressAutoSaveToastRef = useRef(false);
   const isLoadingFromDbRef = useRef(true);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const licenseConfig = useMemo(() => getDesktopLicenseRuntimeConfig(), []);
 
   const [notes, setNotes] = useState<NoteItem[]>(initialNotes);
   const [selectedNoteId, setSelectedNoteId] = useState(
@@ -771,6 +787,31 @@ export default function Home() {
     useState<PaletteTriggerState | null>(null);
   const [noteActionMenu, setNoteActionMenu] =
     useState<NoteActionMenuState | null>(null);
+  const [licenseStatus, setLicenseStatus] =
+    useState<LicenseStatusResponse | null>(null);
+  const [licenseActivationError, setLicenseActivationError] = useState<
+    string | null
+  >(null);
+  const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
+  const [isLicenseActivating, setIsLicenseActivating] = useState(false);
+  const [hasResolvedLicenseStatus, setHasResolvedLicenseStatus] =
+    useState(false);
+
+  const buildUnlicensedStatus = useCallback(
+    (params?: {
+      reason?: string;
+      error?: string;
+      configured?: boolean;
+    }): LicenseStatusResponse => ({
+      configured: params?.configured ?? licenseConfig.enabled,
+      licensed: false,
+      checkoutUrl: licenseConfig.checkoutUrl,
+      reverifyDays: licenseConfig.reverifyDays,
+      reason: params?.reason,
+      error: params?.error,
+    }),
+    [licenseConfig],
+  );
 
   const visibleNotes = useMemo(
     () => [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt),
@@ -1196,6 +1237,195 @@ export default function Home() {
     setIsSidebarCollapsed((value) => !value);
   }, [isDesktopViewport]);
 
+  const refreshLicenseStatus = useCallback(async () => {
+    setIsLicenseStatusLoading(true);
+    setLicenseActivationError(null);
+
+    if (!licenseConfig.enabled) {
+      setLicenseStatus(
+        buildUnlicensedStatus({
+          configured: false,
+          reason: "missing_product_id",
+          error:
+            "Desktop license is not configured. Set VITE_GUMROAD_PRODUCT_ID in apps/desktop/.env.",
+        }),
+      );
+      setIsLicenseStatusLoading(false);
+      return;
+    }
+
+    try {
+      await initNoteDb();
+      const session = await loadLicenseSessionFromDb();
+
+      if (!session || session.productId !== licenseConfig.productId) {
+        if (session && session.productId !== licenseConfig.productId) {
+          await clearLicenseSessionInDb();
+        }
+        setLicenseStatus(buildUnlicensedStatus({ reason: "missing_session" }));
+        return;
+      }
+
+      if (!isSessionReverifyDue(session, licenseConfig.reverifyDays)) {
+        setLicenseStatus(toLicensedStatus(session, licenseConfig));
+        return;
+      }
+
+      const verification = await verifyDesktopGumroadLicense({
+        productId: licenseConfig.productId,
+        apiBase: licenseConfig.apiBase,
+        licenseKey: session.licenseKey,
+        incrementUsesCount: false,
+      });
+
+      if (!verification.ok) {
+        if (verification.reason === "network") {
+          setLicenseStatus({
+            ...toLicensedStatus(session, licenseConfig),
+            reason: "network_reverify_failed",
+            error:
+              "Using cached desktop license because Gumroad verification is temporarily unavailable.",
+          });
+          return;
+        }
+
+        await clearLicenseSessionInDb();
+        setLicenseStatus(
+          buildUnlicensedStatus({
+            reason: verification.reason,
+            error: verification.message,
+          }),
+        );
+        return;
+      }
+
+      const refreshedSession: LicenseSessionPayload = {
+        ...session,
+        buyerEmail:
+          (verification.purchase.email ?? "").trim().toLowerCase() ||
+          session.buyerEmail,
+        saleId: verification.saleId,
+        lastVerifiedAt: new Date().toISOString(),
+      };
+
+      await saveLicenseSessionToDb(refreshedSession);
+      setLicenseStatus(toLicensedStatus(refreshedSession, licenseConfig));
+    } catch {
+      setLicenseStatus(
+        buildUnlicensedStatus({
+          reason: "runtime_error",
+          error: "Failed to load desktop license state.",
+        }),
+      );
+    } finally {
+      setIsLicenseStatusLoading(false);
+      setHasResolvedLicenseStatus(true);
+    }
+  }, [buildUnlicensedStatus, licenseConfig]);
+
+  const activateLicense = useCallback(
+    async (params: { licenseKey: string; email: string }) => {
+      setIsLicenseActivating(true);
+      setLicenseActivationError(null);
+
+      if (!licenseConfig.enabled) {
+        const error =
+          "Desktop license is not configured. Set VITE_GUMROAD_PRODUCT_ID in apps/desktop/.env.";
+        setLicenseStatus(
+          buildUnlicensedStatus({
+            configured: false,
+            reason: "missing_product_id",
+            error,
+          }),
+        );
+        setLicenseActivationError(error);
+        setIsLicenseActivating(false);
+        return;
+      }
+
+      const licenseKey = params.licenseKey.trim();
+      const emailInput = params.email.trim().toLowerCase();
+
+      if (!licenseKey) {
+        const error = "License key is required.";
+        setLicenseStatus(
+          buildUnlicensedStatus({ reason: "missing_license_key", error }),
+        );
+        setLicenseActivationError(error);
+        setIsLicenseActivating(false);
+        return;
+      }
+
+      try {
+        const verification = await verifyDesktopGumroadLicense({
+          productId: licenseConfig.productId,
+          apiBase: licenseConfig.apiBase,
+          licenseKey,
+          incrementUsesCount: false,
+        });
+
+        if (!verification.ok) {
+          setLicenseStatus(
+            buildUnlicensedStatus({
+              reason: verification.reason,
+              error: verification.message,
+            }),
+          );
+          setLicenseActivationError(verification.message);
+          return;
+        }
+
+        const buyerEmail =
+          (verification.purchase.email ?? "").trim().toLowerCase() ||
+          emailInput ||
+          "unknown@buyer.local";
+
+        if (emailInput && buyerEmail !== emailInput) {
+          const error =
+            "Purchase email does not match this license key. Use the same email from your Gumroad receipt.";
+          setLicenseStatus(
+            buildUnlicensedStatus({ reason: "email_mismatch", error }),
+          );
+          setLicenseActivationError(error);
+          return;
+        }
+
+        await initNoteDb();
+        const nowIso = new Date().toISOString();
+        const sessionPayload: LicenseSessionPayload = {
+          version: 1,
+          productId: licenseConfig.productId,
+          checkoutUrl: licenseConfig.checkoutUrl,
+          licenseKey,
+          licenseKeyPreview: maskLicenseKey(licenseKey),
+          buyerEmail,
+          saleId: verification.saleId,
+          activatedAt: nowIso,
+          lastVerifiedAt: nowIso,
+        };
+
+        await saveLicenseSessionToDb(sessionPayload);
+        setLicenseStatus(toLicensedStatus(sessionPayload, licenseConfig));
+        setLicenseActivationError(null);
+      } catch {
+        const error = "Failed to activate desktop license. Please retry.";
+        setLicenseStatus(
+          buildUnlicensedStatus({ reason: "runtime_error", error }),
+        );
+        setLicenseActivationError(error);
+      } finally {
+        setIsLicenseActivating(false);
+      }
+    },
+    [buildUnlicensedStatus, licenseConfig],
+  );
+
+  const deactivateLicense = useCallback(async () => {
+    await clearLicenseSessionInDb();
+    setLicenseStatus(buildUnlicensedStatus({ reason: "missing_session" }));
+    setLicenseActivationError(null);
+  }, [buildUnlicensedStatus]);
+
   const handleExport = (format: ExportFormat) => {
     setIsExportOpen(false);
     const runtime = window.$typst;
@@ -1316,6 +1546,10 @@ export default function Home() {
     setNoteActionMenu(null);
     setIsSidebarOpenMobile(false);
   };
+
+  useEffect(() => {
+    void refreshLicenseStatus();
+  }, [refreshLicenseStatus]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -1714,6 +1948,19 @@ export default function Home() {
     };
   }, [isTypstReady, selectedNote, selectedNoteContent]);
 
+  if (!hasResolvedLicenseStatus || !licenseStatus?.licensed) {
+    return (
+      <LicenseGate
+        status={licenseStatus}
+        isLoading={isLicenseStatusLoading}
+        isActivating={isLicenseActivating}
+        activateError={licenseActivationError}
+        onActivate={activateLicense}
+        onRefresh={refreshLicenseStatus}
+      />
+    );
+  }
+
   return (
     <div
       className={`library-app-shell ${isSidebarOpenMobile ? "sidebar-open-mobile" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}
@@ -1802,7 +2049,12 @@ export default function Home() {
             )}
           </div>
         </div>
-        <SettingsTrigger />
+        <SettingsTrigger
+          licenseStatus={licenseStatus}
+          isLoadingLicense={isLicenseStatusLoading}
+          onRefreshLicenseStatus={refreshLicenseStatus}
+          onDeactivateLicense={deactivateLicense}
+        />
       </aside>
 
       <main className="editor-canvas">

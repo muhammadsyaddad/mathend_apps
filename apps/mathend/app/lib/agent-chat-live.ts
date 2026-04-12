@@ -46,7 +46,7 @@ const buildSystemPrompt = (workspace?: {
   return [
     ...instructions,
     "Active file context:",
-    `<file title=\"${workspace.fileTitle}\">`,
+    `<file title="${workspace.fileTitle}">`,
     trimmedContent,
     "</file>",
   ].join("\n");

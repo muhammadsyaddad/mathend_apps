@@ -62,6 +62,26 @@ Catatan:
 - Untuk Claude Code AI, isi `AUTH_URL` dan `TOKEN_URL` sesuai penyedia OAuth yang kamu gunakan.
 - Untuk GitHub Copilot chat, kamu bisa pakai OAuth token hasil login, atau set `MATHEND_GITHUB_MODELS_PAT` agar request chat diarahkan ke `models.github.ai`.
 
+## Setup Gumroad license (wajib untuk akses workspace)
+
+Mathend sekarang menggunakan aktivasi lisensi Gumroad sebelum editor bisa dibuka.
+
+1. Buat product Gumroad dan aktifkan license key.
+2. Isi env berikut di `apps/mathend/.env.local`:
+
+```bash
+GUMROAD_PRODUCT_ID=
+GUMROAD_API_BASE=https://api.gumroad.com
+GUMROAD_CHECKOUT_URL=https://muhamsyad.gumroad.com/l/mathend
+LICENSE_COOKIE_SECRET=
+LICENSE_REVERIFY_DAYS=7
+```
+
+Catatan:
+
+- `GUMROAD_PRODUCT_ID` dan `LICENSE_COOKIE_SECRET` wajib di server.
+- Jika belum diisi, app akan tetap menampilkan layar aktivasi lisensi.
+
 ## Callback URL
 
 Callback path yang dipakai aplikasi:
@@ -79,6 +99,9 @@ Daftarkan URL callback ini pada OAuth app provider terkait.
 - `GET /api/oauth/callback/[providerId]` -> callback + token exchange
 - `POST /api/oauth/disconnect` -> putuskan koneksi provider
 - `POST /api/agent/chat` -> kirim message ke agent panel (provider live jika endpoint tersedia)
+- `GET /api/license/status` -> cek status lisensi browser saat ini
+- `POST /api/license/activate` -> aktivasi lisensi Gumroad
+- `POST /api/license/deactivate` -> hapus sesi lisensi browser saat ini
 
 ## Verifikasi
 

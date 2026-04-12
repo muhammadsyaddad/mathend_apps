@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExportModal, type ExportFormat } from "./components/export-modal";
+import LicenseGate from "./components/license-gate";
 import SettingsTrigger from "./components/setting-triger";
+import type { LicenseStatusResponse } from "./lib/license-types";
 
 type TypstRuntime = {
   svg: (options: { mainContent: string }) => Promise<string>;
@@ -745,6 +747,74 @@ export default function Home() {
     useState<PaletteTriggerState | null>(null);
   const [noteActionMenu, setNoteActionMenu] =
     useState<NoteActionMenuState | null>(null);
+  const [licenseStatus, setLicenseStatus] =
+    useState<LicenseStatusResponse | null>(null);
+  const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
+  const [isActivatingLicense, setIsActivatingLicense] = useState(false);
+  const [licenseActivationError, setLicenseActivationError] = useState<
+    string | null
+  >(null);
+
+  const refreshLicenseStatus = useCallback(async () => {
+    setIsLicenseStatusLoading(true);
+
+    try {
+      const response = await fetch("/api/license/status", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as LicenseStatusResponse;
+      setLicenseStatus(payload);
+      if (!response.ok && payload.error) {
+        setLicenseActivationError(payload.error);
+      } else {
+        setLicenseActivationError(null);
+      }
+    } catch {
+      setLicenseStatus({
+        configured: false,
+        licensed: false,
+        checkoutUrl: "https://muhamsyad.gumroad.com/l/mathend",
+        reason: "network",
+        error: "Failed to check license status. Please retry.",
+      });
+      setLicenseActivationError(
+        "Failed to check license status. Please retry.",
+      );
+    } finally {
+      setIsLicenseStatusLoading(false);
+    }
+  }, []);
+
+  const activateLicense = useCallback(
+    async (params: { licenseKey: string; email: string }) => {
+      setIsActivatingLicense(true);
+      setLicenseActivationError(null);
+
+      try {
+        const response = await fetch("/api/license/activate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(params),
+        });
+        const payload = (await response.json()) as LicenseStatusResponse;
+        if (!response.ok) {
+          setLicenseActivationError(
+            payload.error ?? "Failed to activate license.",
+          );
+          return;
+        }
+        setLicenseStatus(payload);
+        setLicenseActivationError(null);
+      } catch {
+        setLicenseActivationError("Failed to activate license. Please retry.");
+      } finally {
+        setIsActivatingLicense(false);
+      }
+    },
+    [],
+  );
 
   const visibleNotes = useMemo(
     () => [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt),
@@ -1383,6 +1453,10 @@ export default function Home() {
   };
 
   useEffect(() => {
+    void refreshLicenseStatus();
+  }, [refreshLicenseStatus]);
+
+  useEffect(() => {
     try {
       const rawNotes = window.localStorage.getItem(STORAGE_NOTES_KEY);
       const rawSelectedNote = window.localStorage.getItem(
@@ -1771,6 +1845,19 @@ export default function Home() {
       }
     };
   }, [isTypstReady, selectedNote, selectedNoteContent]);
+
+  if (isLicenseStatusLoading || !licenseStatus?.licensed) {
+    return (
+      <LicenseGate
+        status={licenseStatus}
+        isLoading={isLicenseStatusLoading}
+        isActivating={isActivatingLicense}
+        activateError={licenseActivationError}
+        onActivate={activateLicense}
+        onRefresh={refreshLicenseStatus}
+      />
+    );
+  }
 
   return (
     <div

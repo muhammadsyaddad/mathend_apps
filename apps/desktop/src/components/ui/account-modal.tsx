@@ -1,15 +1,30 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { LicenseStatusResponse } from "../../lib/license-types";
 
 type AccountModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  licenseStatus: LicenseStatusResponse | null;
+  isLoadingLicense: boolean;
+  onRefreshLicenseStatus: () => Promise<void>;
+  onDeactivateLicense: () => Promise<void>;
 };
 
-export default function AccountModal({ isOpen, onClose }: AccountModalProps) {
+export default function AccountModal({
+  isOpen,
+  onClose,
+  licenseStatus,
+  isLoadingLicense,
+  onRefreshLicenseStatus,
+  onDeactivateLicense,
+}: AccountModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,6 +53,12 @@ export default function AccountModal({ isOpen, onClose }: AccountModalProps) {
       return;
     }
 
+    setLicenseError(null);
+
+    void onRefreshLicenseStatus().catch(() => {
+      setLicenseError("Failed to load desktop license status.");
+    });
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -48,7 +69,20 @@ export default function AccountModal({ isOpen, onClose }: AccountModalProps) {
     return () => {
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, onRefreshLicenseStatus]);
+
+  const handleDeactivate = async () => {
+    setIsDeactivating(true);
+    setLicenseError(null);
+
+    try {
+      await onDeactivateLicense();
+    } catch {
+      setLicenseError("Failed to deactivate this desktop license session.");
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
 
   if (!shouldRender) {
     return null;
@@ -89,23 +123,73 @@ export default function AccountModal({ isOpen, onClose }: AccountModalProps) {
         </header>
 
         <p className="settings-subtitle">
-          Manage profile details and workspace access for this project.
+          Manage this desktop license session.
         </p>
 
         <div className="settings-list">
           <div className="settings-row">
-            <span className="settings-label">Signed in as</span>
-            <span className="settings-value">syaddad@mathend.dev</span>
+            <span className="settings-label">Licensed email</span>
+            <span className="settings-value">
+              {licenseStatus?.buyerEmail ?? "license required"}
+            </span>
           </div>
           <div className="settings-row">
-            <span className="settings-label">Role</span>
-            <span className="settings-value">Owner</span>
+            <span className="settings-label">Product</span>
+            <span className="settings-value">
+              {licenseStatus?.productId ?? "not configured"}
+            </span>
           </div>
           <div className="settings-row">
             <span className="settings-label">Plan</span>
-            <span className="settings-value">Pro Workspace</span>
+            <span className="settings-value">
+              {licenseStatus?.licensed ? "Lifetime" : "Unlicensed"}
+            </span>
+          </div>
+          <div className="settings-row settings-row-stack">
+            <span className="settings-label">License key</span>
+            <span className="settings-value">
+              {licenseStatus?.licenseKeyPreview ?? "not activated"}
+            </span>
+            {licenseStatus?.lastVerifiedAt && (
+              <span className="settings-muted-text">
+                Verified{" "}
+                {new Date(licenseStatus.lastVerifiedAt).toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
+
+        {isLoadingLicense && (
+          <p className="settings-subtitle">
+            <Loader2 size={14} className="spin" aria-hidden /> Loading
+            license...
+          </p>
+        )}
+
+        {licenseStatus?.error && (
+          <p className="agent-inline-error">{licenseStatus.error}</p>
+        )}
+        {licenseError && <p className="agent-inline-error">{licenseError}</p>}
+
+        {licenseStatus?.licensed && (
+          <button
+            type="button"
+            className="settings-dismiss settings-dismiss-danger"
+            onClick={() => void handleDeactivate()}
+            disabled={isDeactivating}
+          >
+            {isDeactivating ? "Deactivating..." : "Deactivate this desktop"}
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => void onRefreshLicenseStatus()}
+          className="settings-dismiss"
+          disabled={isLoadingLicense}
+        >
+          Refresh License Status
+        </button>
 
         <button type="button" onClick={onClose} className="settings-dismiss">
           Back to Notes

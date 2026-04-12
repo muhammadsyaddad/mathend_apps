@@ -1157,6 +1157,170 @@ a {
   width: calc(100% - 2.2rem);
 }
 
+.settings-dismiss-danger {
+  border-color: rgba(242, 119, 122, 0.42);
+  background: rgba(112, 28, 31, 0.52);
+  margin-bottom: 0.65rem;
+}
+
+.settings-dismiss-danger:hover {
+  background: rgba(139, 31, 35, 0.58);
+}
+
+.settings-row-stack {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.settings-muted-text {
+  color: var(--text-muted);
+  font-family: var(--font-body), "IBM Plex Sans", sans-serif;
+  font-size: 0.72rem;
+}
+
+.license-gate-shell {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 55%),
+    var(--bg-base);
+}
+
+.license-gate-card {
+  width: min(28rem, 100%);
+  border: 1px solid #2f2f2f;
+  border-radius: var(--radius-lg);
+  background: rgba(13, 13, 13, 0.96);
+  box-shadow: var(--shadow-lg);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.license-gate-kicker {
+  color: var(--text-muted);
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.license-gate-title {
+  font-family: var(--font-display), "Space Grotesk", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.license-gate-copy {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.license-gate-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.license-gate-buy,
+.license-gate-refresh,
+.license-gate-submit {
+  min-height: 2.3rem;
+  border: 1px solid #3b3b3b;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.license-gate-buy {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.license-gate-buy:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.license-gate-refresh,
+.license-gate-submit {
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.license-gate-refresh:hover,
+.license-gate-submit:hover {
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.license-gate-refresh:disabled,
+.license-gate-submit:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.license-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.license-gate-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.24rem;
+}
+
+.license-gate-field span {
+  color: var(--text-muted);
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.license-gate-field input {
+  width: 100%;
+  min-height: 2.3rem;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  background: rgba(10, 10, 10, 0.85);
+  color: var(--text-main);
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  padding: 0 0.62rem;
+}
+
+.license-gate-field input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.license-gate-error {
+  border: 1px solid rgba(242, 119, 122, 0.42);
+  border-radius: 8px;
+  color: #ffc3c5;
+  background: rgba(72, 21, 23, 0.55);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 0.5rem 0.62rem;
+}
+
+.license-gate-hint {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
 .agent-panel {
   position: fixed;
   top: 0;
@@ -1889,6 +2053,15 @@ a {
 }
 
 @media (max-width: 640px) {
+  .license-gate-actions {
+    flex-direction: column;
+  }
+
+  .license-gate-buy,
+  .license-gate-refresh {
+    width: 100%;
+  }
+
   .library-app-shell,
   .sidebar-collapsed.library-app-shell {
     grid-template-columns: 1fr;
