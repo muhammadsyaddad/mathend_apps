@@ -1,9 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ExportModal, type ExportFormat } from "./components/export-modal";
 import LicenseGate from "./components/license-gate";
 import SettingsTrigger from "./components/setting-triger";
+import {
+  MATH_COMMANDS as commands,
+  buildIntentSnippet,
+  getMathCommandCategoryLabel,
+  getMathCommandSearchScore,
+  getIntentCategoryFromQuery,
+  isAdvancedIntentQuery,
+  type MathCommandItem as CommandItem,
+} from "./lib/math-command-map";
+import { normalizeMathContent, validateMathContent } from "./lib/math-content";
+import { computePalettePlacement } from "./lib/palette-position";
 import type { LicenseStatusResponse } from "./lib/license-types";
 
 type TypstRuntime = {
@@ -27,21 +45,11 @@ type NoteItem = {
   content: string[];
 };
 
-type CommandItem = {
-  id: string;
-  label: string;
-  shortcut: string;
-  keywords?: string[];
-  preview: string;
-  insertText: string;
-  appendSpace?: boolean;
-  cursorOffset?: number;
-  active?: boolean;
-};
-
 type PalettePosition = {
   top: number;
   left: number;
+  maxHeight: number;
+  placement: "above" | "below";
 };
 
 type PaletteTriggerState = {
@@ -103,278 +111,6 @@ const initialNotes: NoteItem[] = [
   },
 ];
 
-const commands: CommandItem[] = [
-  {
-    id: "c-1",
-    label: "Fraction",
-    shortcut: "pecahan",
-    keywords: ["pecahan", "fraction", "frac", "rasio", "bagi"],
-    preview: "a/b",
-    insertText: "□/□",
-    appendSpace: false,
-    cursorOffset: 2,
-    active: true,
-  },
-  {
-    id: "c-2",
-    label: "Square Root",
-    shortcut: "akar",
-    keywords: ["akar", "sqrt", "root", "akar kuadrat"],
-    preview: "√x",
-    insertText: "√()",
-    cursorOffset: 2,
-  },
-  {
-    id: "c-3",
-    label: "N-th Root",
-    shortcut: "akar-n",
-    keywords: ["akar n", "nth root", "n root", "akar pangkat"],
-    preview: "ⁿ√x",
-    insertText: "ⁿ√()",
-    cursorOffset: 2,
-  },
-  {
-    id: "c-4",
-    label: "Integral",
-    shortcut: "integral",
-    keywords: ["integral", "int", "anti turunan"],
-    preview: "∫",
-    insertText: "∫_a^b f(x) dx",
-    cursorOffset: 5,
-  },
-  {
-    id: "c-5",
-    label: "Double Integral",
-    shortcut: "integral-ganda",
-    keywords: ["integral ganda", "double integral", "iint", "∬"],
-    preview: "∬",
-    insertText: "∬_D f(x, y) dA",
-    cursorOffset: 9,
-  },
-  {
-    id: "c-6",
-    label: "Triple Integral",
-    shortcut: "integral-tiga",
-    keywords: ["integral tiga", "triple integral", "iiint", "∭"],
-    preview: "∭",
-    insertText: "∭_V f(x, y, z) dV",
-    cursorOffset: 9,
-  },
-  {
-    id: "c-7",
-    label: "Limit",
-    shortcut: "limit",
-    keywords: ["limit", "lim", "mendekati"],
-    preview: "lim",
-    insertText: "lim_(x→a) f(x)",
-    cursorOffset: 2,
-  },
-  {
-    id: "c-8",
-    label: "Derivative",
-    shortcut: "turunan",
-    keywords: ["turunan", "derivative", "differential", "diff", "d/dx"],
-    preview: "d/dx",
-    insertText: "d/dx f(x)",
-    cursorOffset: 5,
-  },
-  {
-    id: "c-9",
-    label: "Partial Derivative",
-    shortcut: "parsial",
-    keywords: ["parsial", "partial", "∂", "partial derivative"],
-    preview: "∂f/∂x",
-    insertText: "∂f/∂x",
-  },
-  {
-    id: "c-10",
-    label: "Gradient",
-    shortcut: "gradien",
-    keywords: ["gradien", "gradient", "nabla", "∇"],
-    preview: "∇f",
-    insertText: "∇f",
-  },
-  {
-    id: "c-11",
-    label: "Divergence",
-    shortcut: "divergensi",
-    keywords: ["divergensi", "divergence", "div"],
-    preview: "∇·F",
-    insertText: "∇·F",
-  },
-  {
-    id: "c-12",
-    label: "Curl",
-    shortcut: "curl",
-    keywords: ["curl", "rotasi", "rot"],
-    preview: "∇×F",
-    insertText: "∇×F",
-  },
-  {
-    id: "c-13",
-    label: "Laplacian",
-    shortcut: "laplace",
-    keywords: ["laplace", "laplacian", "∇²"],
-    preview: "∇²f",
-    insertText: "∇²f",
-  },
-  {
-    id: "c-14",
-    label: "Summation",
-    shortcut: "sigma",
-    keywords: ["sigma", "sum", "summation", "jumlah", "∑"],
-    preview: "∑",
-    insertText: "∑_(k=1)^n",
-    cursorOffset: 1,
-  },
-  {
-    id: "c-15",
-    label: "Product",
-    shortcut: "produk",
-    keywords: ["produk", "product", "pi product", "∏"],
-    preview: "∏",
-    insertText: "∏_(k=1)^n",
-    cursorOffset: 1,
-  },
-  {
-    id: "c-16",
-    label: "Matrix 2x2",
-    shortcut: "matriks-2",
-    keywords: ["matriks", "matrix", "2x2"],
-    preview: "[a b; c d]",
-    insertText: "[a  b; c  d]",
-    cursorOffset: 8,
-  },
-  {
-    id: "c-17",
-    label: "Matrix 3x3",
-    shortcut: "matriks-3",
-    keywords: ["matrix 3", "matriks 3", "3x3"],
-    preview: "[a b c; d e f; g h i]",
-    insertText: "[a  b  c; d  e  f; g  h  i]",
-    cursorOffset: 17,
-  },
-  {
-    id: "c-18",
-    label: "Determinant",
-    shortcut: "determinan",
-    keywords: ["determinan", "determinant", "det"],
-    preview: "det(A)",
-    insertText: "det(A)",
-  },
-  {
-    id: "c-19",
-    label: "Piecewise Function",
-    shortcut: "piecewise",
-    keywords: ["piecewise", "cases", "kasus", "fungsi potongan"],
-    preview: "{...}",
-    insertText: "{ f(x), x>=0; g(x), x<0 }",
-    cursorOffset: 18,
-  },
-  {
-    id: "c-20",
-    label: "Dot Product",
-    shortcut: "dot",
-    keywords: ["dot", "dot product", "hasil kali titik"],
-    preview: "⋅",
-    insertText: "u ⋅ v",
-  },
-  {
-    id: "c-21",
-    label: "Cross Product",
-    shortcut: "cross",
-    keywords: ["cross", "cross product", "hasil kali silang"],
-    preview: "×",
-    insertText: "u × v",
-  },
-  {
-    id: "c-22",
-    label: "Norm",
-    shortcut: "norma",
-    keywords: ["norma", "norm", "panjang vektor"],
-    preview: "||v||",
-    insertText: "||v||",
-    cursorOffset: 2,
-  },
-  {
-    id: "c-23",
-    label: "Infinity",
-    shortcut: "tak-hingga",
-    keywords: ["tak hingga", "infinity", "inf", "∞"],
-    preview: "∞",
-    insertText: "∞",
-  },
-  {
-    id: "c-24",
-    label: "Pi",
-    shortcut: "pi",
-    keywords: ["pi", "konstanta", "π"],
-    preview: "π",
-    insertText: "π",
-  },
-  {
-    id: "c-25",
-    label: "Superscript",
-    shortcut: "pangkat",
-    keywords: ["pangkat", "superscript", "power", "eksponen"],
-    preview: "xⁿ",
-    insertText: "xⁿ",
-  },
-  {
-    id: "c-26",
-    label: "Subscript",
-    shortcut: "subskrip",
-    keywords: ["subskrip", "subscript", "index"],
-    preview: "xₙ",
-    insertText: "xₙ",
-  },
-  {
-    id: "c-27",
-    label: "System of Equations",
-    shortcut: "sistem",
-    keywords: ["sistem", "system", "persamaan linear"],
-    preview: "{a+b=0}",
-    insertText: "{ a + b = 0; c - d = 1 }",
-    cursorOffset: 18,
-  },
-  {
-    id: "c-28",
-    label: "Aligned Equations",
-    shortcut: "align",
-    keywords: ["align", "aligned", "turunan langkah"],
-    preview: "= =",
-    insertText: "a = b\n  = c\n  = d",
-    cursorOffset: 9,
-  },
-  {
-    id: "c-29",
-    label: "Theorem Block",
-    shortcut: "teorema",
-    keywords: ["teorema", "theorem", "proposisi"],
-    preview: "Thm",
-    insertText: "Teorema.\nTuliskan pernyataan teorema di sini.",
-    cursorOffset: 31,
-  },
-  {
-    id: "c-30",
-    label: "Lemma Block",
-    shortcut: "lemma",
-    keywords: ["lemma", "lemma block", "bantuan teorema"],
-    preview: "Lem",
-    insertText: "Lemma.\nTuliskan lemma pendukung di sini.",
-    cursorOffset: 30,
-  },
-  {
-    id: "c-31",
-    label: "Proof Block",
-    shortcut: "bukti",
-    keywords: ["bukti", "proof", "pembuktian"],
-    preview: "QED",
-    insertText: "Bukti.\nLangkah 1.\nLangkah 2.\nSelesai.",
-    cursorOffset: 26,
-  },
-];
-
 const LONG_PRESS_DURATION_MS = 430;
 
 const STORAGE_NOTES_KEY = "mathend.notes.v1";
@@ -420,165 +156,9 @@ const looksLikeMathLine = (line: string): boolean => {
     return true;
   }
 
-  return /[∫∬∭∑∏√∞π∂∇⋅×≤≥≈≠→]|\b(lim|det|matrix|grad|curl|div|d\/dx)\b|[=^_]/i.test(
+  return /[∫∬∭∮∯∑∏√∞π∂∇⋅×≤≥≈≠→]|\b(lim|det|matrix|grad|curl|div|d\/dx)\b|frac\(|sqrt\(|root\(|arg\s+(?:min|max)|Var\(|Cov\(|E\[|L\{|Res\(|[=^_]/i.test(
     trimmed,
   );
-};
-
-const normalizeIntentText = (value: string): string =>
-  value
-    .toLowerCase()
-    .replaceAll("∞", "tak hingga")
-    .replaceAll("→", "menuju")
-    .replaceAll(/\s+/g, " ")
-    .trim();
-
-const buildIntentSnippet = (query: string): string | null => {
-  const normalized = normalizeIntentText(query);
-
-  const boundedIntegral = normalized.match(
-    /integral\s+(.+?)\s+sampai\s+(.+?)(?:\s+of|\s+untuk|\s+fungsi)?\s+(.+?)(?:\s+d([a-z]))?$/i,
-  );
-  if (boundedIntegral) {
-    const lower = boundedIntegral[1]?.trim() ?? "a";
-    const upper = boundedIntegral[2]?.trim() ?? "b";
-    const body = boundedIntegral[3]?.trim() ?? "f(x)";
-    const variable = boundedIntegral[4]?.trim() ?? "x";
-    const resolvedUpper =
-      upper === "tak hingga" || upper === "infinity" ? "∞" : upper;
-    return `∫_(${lower})^(${resolvedUpper}) ${body} d${variable}`;
-  }
-
-  const integralInfinity = normalized.match(
-    /integral\s+(.+?)\s+sampai\s+(tak hingga|infinity)(?:\s+of|\s+untuk|\s+fungsi)?\s+(.+?)(?:\s+d([a-z]))?$/i,
-  );
-  if (integralInfinity) {
-    const lower = integralInfinity[1]?.trim() ?? "0";
-    const body = integralInfinity[3]?.trim() ?? "f(x)";
-    const variable = integralInfinity[4]?.trim() ?? "x";
-    return `∫_(${lower})^∞ ${body} d${variable}`;
-  }
-
-  const limitIntent = normalized.match(
-    /limit\s+([a-z])\s+(menuju|to|->)\s+(.+?)(?:\s+dari\s+(.+))?$/i,
-  );
-  if (limitIntent) {
-    const variable = limitIntent[1] ?? "x";
-    const toward = limitIntent[3]?.trim() ?? "a";
-    const expr = limitIntent[4]?.trim() ?? "f(x)";
-    return `lim_(${variable}→${toward}) ${expr}`;
-  }
-
-  const sumIntent = normalized.match(
-    /(jumlah|sigma|sum)\s+([a-z])\s+dari\s+(.+?)\s+sampai\s+(.+)$/i,
-  );
-  if (sumIntent) {
-    const variable = sumIntent[2] ?? "k";
-    const lower = sumIntent[3]?.trim() ?? "1";
-    const upper = sumIntent[4]?.trim() ?? "n";
-    return `∑_(${variable}=${lower})^(${upper})`;
-  }
-
-  const productIntent = normalized.match(
-    /(produk|product)\s+([a-z])\s+dari\s+(.+?)\s+sampai\s+(.+)$/i,
-  );
-  if (productIntent) {
-    const variable = productIntent[2] ?? "k";
-    const lower = productIntent[3]?.trim() ?? "1";
-    const upper = productIntent[4]?.trim() ?? "n";
-    return `∏_(${variable}=${lower})^(${upper})`;
-  }
-
-  const derivativeIntent = normalized.match(
-    /turunan\s+(.+?)\s+terhadap\s+([a-z])$/i,
-  );
-  if (derivativeIntent) {
-    const expr = derivativeIntent[1]?.trim() ?? "f(x)";
-    const variable = derivativeIntent[2] ?? "x";
-    return `d/d${variable} ${expr}`;
-  }
-
-  const partialIntent = normalized.match(
-    /(turunan parsial|partial derivative)\s+(.+?)\s+terhadap\s+([a-z])$/i,
-  );
-  if (partialIntent) {
-    const expr = partialIntent[2]?.trim() ?? "f";
-    const variable = partialIntent[3] ?? "x";
-    return `∂${expr}/∂${variable}`;
-  }
-
-  return null;
-};
-
-const intentStopWords = new Set([
-  "dari",
-  "sampai",
-  "terhadap",
-  "menuju",
-  "ke",
-  "untuk",
-  "dan",
-  "the",
-  "to",
-  "from",
-  "of",
-]);
-
-const getCommandSearchScore = (command: CommandItem, query: string): number => {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) {
-    return command.active ? 100 : 0;
-  }
-
-  const searchableParts = [
-    command.label,
-    command.shortcut,
-    ...(command.keywords ?? []),
-  ].map((item) => item.toLowerCase());
-  const searchableText = searchableParts.join(" ");
-
-  let score = -1;
-  if (command.shortcut.toLowerCase().startsWith(normalizedQuery)) {
-    score += 60;
-  }
-  if (command.label.toLowerCase().includes(normalizedQuery)) {
-    score += 42;
-  }
-  if (
-    (command.keywords ?? []).some((keyword) =>
-      keyword.includes(normalizedQuery),
-    )
-  ) {
-    score += 34;
-  }
-
-  const tokens = normalizedQuery
-    .split(/\s+/)
-    .filter((token) => token.length > 0);
-  const meaningfulTokens = tokens.filter((token) => {
-    if (/^\d+$/.test(token)) {
-      return false;
-    }
-    return !intentStopWords.has(token);
-  });
-
-  if (meaningfulTokens.length === 0 && score >= 0) {
-    return score;
-  }
-
-  let matchedMeaningfulToken = false;
-  for (const token of meaningfulTokens) {
-    if (searchableText.includes(token)) {
-      score += 8;
-      matchedMeaningfulToken = true;
-    }
-  }
-
-  if (meaningfulTokens.length > 0 && !matchedMeaningfulToken && score < 30) {
-    return -1;
-  }
-
-  return score;
 };
 
 const buildTypstDocument = (title: string, content: string): string => {
@@ -623,11 +203,40 @@ const buildTypstDocument = (title: string, content: string): string => {
       continue;
     }
 
+    if (/^definisi\.?/i.test(trimmed) || /^definition\.?/i.test(trimmed)) {
+      const body = escapeTypstText(
+        trimmed.replace(/^(definisi|definition)\.?\s*/i, ""),
+      );
+      blocks.push(
+        `box(stroke: luma(210), inset: 10pt, radius: 6pt)[*Definisi.* ${body}]`,
+      );
+      continue;
+    }
+
+    if (/^korolari\.?/i.test(trimmed) || /^corollary\.?/i.test(trimmed)) {
+      const body = escapeTypstText(
+        trimmed.replace(/^(korolari|corollary)\.?\s*/i, ""),
+      );
+      blocks.push(
+        `box(stroke: luma(210), inset: 10pt, radius: 6pt)[*Korolari.* ${body}]`,
+      );
+      continue;
+    }
+
     if (/^bukti\.?/i.test(trimmed) || /^proof\.?/i.test(trimmed)) {
       const body = escapeTypstText(
         trimmed.replace(/^(bukti|proof)\.?\s*/i, ""),
       );
       blocks.push(`[*Bukti.* ${body}]`);
+      continue;
+    }
+
+    if (
+      trimmed.startsWith("$") &&
+      trimmed.endsWith("$") &&
+      trimmed.length > 2
+    ) {
+      blocks.push(trimmed);
       continue;
     }
 
@@ -704,6 +313,7 @@ const getCaretPositionInTextarea = (
 
 export default function Home() {
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const paletteContainerRef = useRef<HTMLElement | null>(null);
   const paletteListRef = useRef<HTMLDivElement | null>(null);
   const paletteItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const noteActionMenuRef = useRef<HTMLDivElement | null>(null);
@@ -711,8 +321,6 @@ export default function Home() {
   const suppressNoteClickRef = useRef(false);
   const saveToastTimeoutRef = useRef<number | null>(null);
   const compileTimerRef = useRef<number | null>(null);
-  const didInitPersistRef = useRef(false);
-  const suppressAutoSaveToastRef = useRef(false);
 
   const [notes, setNotes] = useState<NoteItem[]>(initialNotes);
   const [selectedNoteId, setSelectedNoteId] = useState(
@@ -735,7 +343,10 @@ export default function Home() {
   );
   const [isHydratedFromStorage, setIsHydratedFromStorage] = useState(false);
   const [showSaveToast, setShowSaveToast] = useState(false);
-  const [saveToastMessage, setSaveToastMessage] = useState("Auto-saved");
+  const [saveToastMessage, setSaveToastMessage] = useState("Saved");
+  const [savedNotesSnapshot, setSavedNotesSnapshot] = useState(() =>
+    JSON.stringify(initialNotes),
+  );
   const [isTypstReady, setIsTypstReady] = useState(false);
   const [isTypstRuntimeLoading, setIsTypstRuntimeLoading] = useState(false);
   const [isTypstCompiling, setIsTypstCompiling] = useState(false);
@@ -828,6 +439,10 @@ export default function Home() {
     notes[0];
 
   const selectedNoteContent = selectedNote?.content.join("\n\n") ?? "";
+  const serializedNotes = useMemo(() => JSON.stringify(notes), [notes]);
+  const hasUnsavedChanges =
+    isHydratedFromStorage && serializedNotes !== savedNotesSnapshot;
+
   const activeAgentFile = useMemo(() => {
     if (!selectedNote) {
       return null;
@@ -859,6 +474,9 @@ export default function Home() {
       return null;
     }
 
+    const category = getIntentCategoryFromQuery(query);
+    const advancedIntent = isAdvancedIntentQuery(query);
+
     return {
       id: "intent-natural-math",
       label: "Natural Math Intent",
@@ -868,6 +486,8 @@ export default function Home() {
       appendSpace: false,
       cursorOffset: 0,
       keywords: ["intent", "auto", "natural"],
+      category,
+      level: advancedIntent ? "advanced" : "core",
     } satisfies CommandItem;
   }, [paletteQuery]);
 
@@ -876,7 +496,7 @@ export default function Home() {
     const ranked = commands
       .map((command) => ({
         command,
-        score: getCommandSearchScore(command, query),
+        score: getMathCommandSearchScore(command, query),
       }))
       .filter((entry) => entry.score >= 0)
       .sort((a, b) => b.score - a.score)
@@ -894,6 +514,39 @@ export default function Home() {
 
     return [intentCommand, ...ranked];
   }, [intentCommand, paletteQuery]);
+
+  const activePaletteCommand =
+    filteredCommands.length > 0 ? filteredCommands[paletteIndex] : null;
+
+  const activePaletteCategoryLabel = activePaletteCommand
+    ? getMathCommandCategoryLabel(activePaletteCommand.category)
+    : "Typst Math";
+
+  const groupedPaletteCommands = useMemo(() => {
+    const groups = new Map<string, CommandItem[]>();
+    for (const command of filteredCommands) {
+      const categoryLabel = getMathCommandCategoryLabel(command.category);
+      const existing = groups.get(categoryLabel);
+      if (existing) {
+        existing.push(command);
+      } else {
+        groups.set(categoryLabel, [command]);
+      }
+    }
+
+    return Array.from(groups.entries()).map(([label, items]) => ({
+      label,
+      items,
+    }));
+  }, [filteredCommands]);
+
+  const paletteCommandIndexById = useMemo(() => {
+    const indexMap = new Map<string, number>();
+    for (const [index, command] of filteredCommands.entries()) {
+      indexMap.set(command.id, index);
+    }
+    return indexMap;
+  }, [filteredCommands]);
 
   const isDesktopViewport = useCallback((): boolean => {
     if (typeof window === "undefined") {
@@ -1076,41 +729,57 @@ export default function Home() {
     [selectedNoteId, updateNoteById],
   );
 
-  const overwriteActiveFile = useCallback(
-    (fileId: string, nextContent: string): boolean => {
-      if (!notes.some((note) => note.id === fileId)) {
+  const normalizeForMathWorkspace = useCallback((value: string): string => {
+    const normalized = normalizeMathContent(value, {
+      target: "typst",
+    });
+    const validation = validateMathContent(normalized);
+    return validation.fixedContent;
+  }, []);
+
+  const writeNoteContentById = useCallback(
+    (noteId: string, nextContent: string): boolean => {
+      if (!notes.some((note) => note.id === noteId)) {
         return false;
       }
 
-      updateNoteById(fileId, (note) => ({
+      const normalizedContent = normalizeForMathWorkspace(nextContent);
+      updateNoteById(noteId, (note) => ({
         ...note,
-        content: [nextContent],
-        subtitle: getNoteSubtitle(nextContent),
+        content: [normalizedContent],
+        subtitle: getNoteSubtitle(normalizedContent),
       }));
       return true;
     },
-    [notes, updateNoteById],
+    [normalizeForMathWorkspace, notes, updateNoteById],
+  );
+
+  const overwriteActiveFile = useCallback(
+    (fileId: string, nextContent: string): boolean => {
+      return writeNoteContentById(fileId, nextContent);
+    },
+    [writeNoteContentById],
   );
 
   const appendToActiveFile = useCallback(
     (fileId: string, appendContent: string): boolean => {
-      if (!notes.some((note) => note.id === fileId)) {
+      const targetNote = notes.find((note) => note.id === fileId);
+      if (!targetNote) {
         return false;
       }
 
-      updateNoteById(fileId, (note) => {
-        const currentValue = note.content.join("\n\n");
-        const nextValue = `${currentValue}${appendContent}`;
+      const currentValue = targetNote.content.join("\n\n");
+      const shouldInsertBlockGap =
+        currentValue.trim().length > 0 &&
+        appendContent.trim().length > 0 &&
+        !appendContent.startsWith("\n");
+      const nextValue = shouldInsertBlockGap
+        ? `${currentValue}\n\n${appendContent}`
+        : `${currentValue}${appendContent}`;
 
-        return {
-          ...note,
-          content: [nextValue],
-          subtitle: getNoteSubtitle(nextValue),
-        };
-      });
-      return true;
+      return writeNoteContentById(fileId, nextValue);
     },
-    [notes, updateNoteById],
+    [notes, writeNoteContentById],
   );
 
   const replaceInActiveFile = useCallback(
@@ -1132,18 +801,11 @@ export default function Home() {
       }
 
       const nextValue = parts.join(replaceWith);
-
-      updateNoteById(fileId, (note) => {
-        return {
-          ...note,
-          content: [nextValue],
-          subtitle: getNoteSubtitle(nextValue),
-        };
-      });
+      writeNoteContentById(fileId, nextValue);
 
       return replacementCount;
     },
-    [notes, updateNoteById],
+    [notes, writeNoteContentById],
   );
 
   const navigatePalette = useCallback(
@@ -1173,18 +835,18 @@ export default function Home() {
     if (editor && window.innerWidth > 640) {
       const caretPosition = getCaretPositionInTextarea(editor, cursorPosition);
       if (caretPosition) {
-        const paletteWidth = 352;
-        const viewportPadding = 12;
-        const maxLeft = window.innerWidth - paletteWidth - viewportPadding;
-        const left = Math.max(
-          viewportPadding,
-          Math.min(caretPosition.left, maxLeft),
-        );
-        const top = Math.min(
-          window.innerHeight - viewportPadding,
-          caretPosition.top + caretPosition.height + 8,
-        );
-        setPalettePosition({ top, left });
+        const measuredPaletteHeight =
+          paletteContainerRef.current?.offsetHeight ?? 420;
+        const placement = computePalettePlacement({
+          caretTop: caretPosition.top,
+          caretLeft: caretPosition.left,
+          caretHeight: caretPosition.height,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          paletteWidth: 352,
+          estimatedPaletteHeight: measuredPaletteHeight,
+        });
+        setPalettePosition(placement);
         return;
       }
     }
@@ -1280,11 +942,12 @@ export default function Home() {
         selectedNoteContent.slice(0, triggerStart) +
         replacement +
         selectedNoteContent.slice(triggerEnd);
+      const normalizedNextValue = normalizeForMathWorkspace(nextValue);
 
       updateSelectedNote((note) => ({
         ...note,
-        content: [nextValue],
-        subtitle: getNoteSubtitle(nextValue),
+        content: [normalizedNextValue],
+        subtitle: getNoteSubtitle(normalizedNextValue),
       }));
 
       closePalette();
@@ -1296,7 +959,13 @@ export default function Home() {
         editor.setSelectionRange(nextCursorPosition, nextCursorPosition);
       });
     },
-    [closePalette, paletteTrigger, selectedNoteContent, updateSelectedNote],
+    [
+      closePalette,
+      normalizeForMathWorkspace,
+      paletteTrigger,
+      selectedNoteContent,
+      updateSelectedNote,
+    ],
   );
 
   const handleEditorChange = useCallback(
@@ -1330,6 +999,39 @@ export default function Home() {
     }
     setIsSidebarCollapsed((value) => !value);
   }, [isDesktopViewport]);
+
+  const handleManualSave = useCallback(() => {
+    if (!isHydratedFromStorage) {
+      return;
+    }
+
+    window.localStorage.setItem(STORAGE_NOTES_KEY, serializedNotes);
+    window.localStorage.setItem(STORAGE_SELECTED_NOTE_KEY, selectedNoteId);
+    //buat naro di sidebar collapsed atau enggak, biar pas buka lagi tetep sama kaya terakhir kali
+    window.localStorage.setItem(
+      STORAGE_SIDEBAR_COLLAPSED_KEY,
+      isSidebarCollapsed ? "true" : "false",
+    );
+    window.localStorage.setItem(
+      STORAGE_OPEN_TABS_KEY,
+      JSON.stringify(openTabIds),
+    );
+    setSavedNotesSnapshot(serializedNotes);
+    setSaveToastMessage("Saved");
+    setShowSaveToast(true);
+    if (saveToastTimeoutRef.current) {
+      window.clearTimeout(saveToastTimeoutRef.current);
+    }
+    saveToastTimeoutRef.current = window.setTimeout(() => {
+      setShowSaveToast(false);
+    }, 1200);
+  }, [
+    isHydratedFromStorage,
+    isSidebarCollapsed,
+    openTabIds,
+    selectedNoteId,
+    serializedNotes,
+  ]);
 
   const handleExport = (format: ExportFormat) => {
     setIsExportOpen(false);
@@ -1457,6 +1159,8 @@ export default function Home() {
   }, [refreshLicenseStatus]);
 
   useEffect(() => {
+    let resolvedNotes = initialNotes;
+
     try {
       const rawNotes = window.localStorage.getItem(STORAGE_NOTES_KEY);
       const rawSelectedNote = window.localStorage.getItem(
@@ -1486,6 +1190,7 @@ export default function Home() {
           }) as NoteItem[];
 
           if (validNotes.length === parsed.length) {
+            resolvedNotes = validNotes;
             setNotes(validNotes);
             if (!rawSelectedNote) {
               setSelectedNoteId(validNotes[0]?.id ?? "");
@@ -1511,9 +1216,11 @@ export default function Home() {
         }
       }
     } catch {
+      resolvedNotes = initialNotes;
       setNotes(initialNotes);
       setOpenTabIds(initialNotes.slice(0, 2).map((note) => note.id));
     } finally {
+      setSavedNotesSnapshot(JSON.stringify(resolvedNotes));
       setIsHydratedFromStorage(true);
     }
   }, []);
@@ -1551,12 +1258,6 @@ export default function Home() {
       return;
     }
 
-    if (!didInitPersistRef.current) {
-      didInitPersistRef.current = true;
-      return;
-    }
-
-    window.localStorage.setItem(STORAGE_NOTES_KEY, JSON.stringify(notes));
     window.localStorage.setItem(STORAGE_SELECTED_NOTE_KEY, selectedNoteId);
     window.localStorage.setItem(
       STORAGE_SIDEBAR_COLLAPSED_KEY,
@@ -1566,26 +1267,23 @@ export default function Home() {
       STORAGE_OPEN_TABS_KEY,
       JSON.stringify(openTabIds),
     );
+  }, [isHydratedFromStorage, isSidebarCollapsed, openTabIds, selectedNoteId]);
 
-    if (!suppressAutoSaveToastRef.current) {
-      setSaveToastMessage("Auto-saved");
-      setShowSaveToast(true);
-      if (saveToastTimeoutRef.current) {
-        window.clearTimeout(saveToastTimeoutRef.current);
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) {
+        return;
       }
-      saveToastTimeoutRef.current = window.setTimeout(() => {
-        setShowSaveToast(false);
-      }, 1200);
-    } else {
-      suppressAutoSaveToastRef.current = false;
-    }
-  }, [
-    isHydratedFromStorage,
-    isSidebarCollapsed,
-    notes,
-    openTabIds,
-    selectedNoteId,
-  ]);
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     return () => {
@@ -1707,6 +1405,13 @@ export default function Home() {
 
   useEffect(() => {
     const handleKeyboardShortcuts = (event: KeyboardEvent) => {
+      //ctrl + s
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        handleManualSave();
+        return;
+      }
+
       const target = event.target as HTMLElement | null;
       const isTypingTarget =
         !!target &&
@@ -1752,6 +1457,7 @@ export default function Home() {
   }, [
     applyPaletteCommand,
     filteredCommands,
+    handleManualSave,
     isPaletteOpen,
     navigatePalette,
     paletteIndex,
@@ -1795,6 +1501,33 @@ export default function Home() {
       window.cancelAnimationFrame(animationFrame);
     };
   }, [filteredCommands.length, isPaletteOpen, paletteIndex]);
+
+  useEffect(() => {
+    if (!isPaletteOpen || !paletteTrigger) {
+      return;
+    }
+
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+
+    const updatePosition = () => {
+      const cursorPosition = editor.selectionStart ?? paletteTrigger.end;
+      positionPaletteAtCursor(cursorPosition);
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    editor.addEventListener("scroll", updatePosition);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      editor.removeEventListener("scroll", updatePosition);
+    };
+  }, [isPaletteOpen, paletteQuery, paletteTrigger, positionPaletteAtCursor]);
 
   useEffect(() => {
     if (!isTypstReady || typeof window === "undefined") {
@@ -2018,6 +1751,25 @@ export default function Home() {
                 {selectedNote?.title ?? "workspace.md"}
               </h2>
             </div>
+            <div className="editor-save-controls">
+              <span
+                className={
+                  hasUnsavedChanges
+                    ? "editor-save-indicator editor-save-indicator-dirty"
+                    : "editor-save-indicator"
+                }
+              >
+                {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+              </span>
+              <button
+                type="button"
+                className="editor-save-button"
+                onClick={handleManualSave}
+                disabled={!hasUnsavedChanges}
+              >
+                Save
+              </button>
+            </div>
           </div>
 
           <div className="editor-body">
@@ -2126,11 +1878,26 @@ export default function Home() {
 
                     evaluateSlashTrigger(element.value, cursorPosition);
                   }}
+                  onBlur={(event) => {
+                    const element = event.currentTarget;
+                    const normalizedValue = normalizeForMathWorkspace(
+                      element.value,
+                    );
+                    if (normalizedValue === element.value) {
+                      return;
+                    }
+                    updateSelectedNote((note) => ({
+                      ...note,
+                      content: [normalizedValue],
+                      subtitle: getNoteSubtitle(normalizedValue),
+                    }));
+                  }}
                 />
 
                 {isPaletteOpen && (
                   <section
-                    className="command-palette command-palette-animate"
+                    ref={paletteContainerRef}
+                    className={`command-palette command-palette-animate ${palettePosition?.placement === "above" ? "command-palette-above" : "command-palette-below"}`}
                     aria-label="Math commands"
                     style={
                       palettePosition
@@ -2138,6 +1905,7 @@ export default function Home() {
                             position: "fixed",
                             top: `${palettePosition.top}px`,
                             left: `${palettePosition.left}px`,
+                            maxHeight: `${palettePosition.maxHeight}px`,
                           }
                         : undefined
                     }
@@ -2164,36 +1932,69 @@ export default function Home() {
                       }
                     }}
                   >
-                    <div className="palette-head">Math + Structure</div>
+                    <div className="palette-head">
+                      <span className="palette-head-title">Typst Math Map</span>
+                      <span className="palette-head-category">
+                        {activePaletteCategoryLabel}
+                      </span>
+                    </div>
                     <div className="palette-list" ref={paletteListRef}>
-                      {filteredCommands.map((command, index) => (
-                        <button
-                          type="button"
-                          key={command.id}
-                          ref={(element) => {
-                            paletteItemRefs.current[index] = element;
-                          }}
-                          className={
-                            index === paletteIndex
-                              ? "palette-item palette-item-active"
-                              : "palette-item"
-                          }
-                          onMouseEnter={() => setPaletteIndex(index)}
-                          onClick={() => applyPaletteCommand(command)}
-                        >
-                          <div className="palette-item-left">
-                            <div className="palette-glyph" aria-hidden>
-                              {command.preview}
+                      {groupedPaletteCommands.map((group) => {
+                        return (
+                          <Fragment key={group.label}>
+                            <div className="palette-group-label">
+                              {group.label}
                             </div>
-                            <span className="palette-name">
-                              {command.label}
-                            </span>
-                          </div>
-                          <span className="palette-shortcut">
-                            {command.shortcut}
-                          </span>
-                        </button>
-                      ))}
+                            {group.items.map((command) => {
+                              const globalIndex =
+                                paletteCommandIndexById.get(command.id) ?? -1;
+                              if (globalIndex < 0) {
+                                return null;
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  key={command.id}
+                                  ref={(element) => {
+                                    paletteItemRefs.current[globalIndex] =
+                                      element;
+                                  }}
+                                  className={
+                                    globalIndex === paletteIndex
+                                      ? "palette-item palette-item-active"
+                                      : "palette-item"
+                                  }
+                                  onMouseEnter={() =>
+                                    setPaletteIndex(globalIndex)
+                                  }
+                                  onClick={() => applyPaletteCommand(command)}
+                                >
+                                  <div className="palette-item-left">
+                                    <div className="palette-glyph" aria-hidden>
+                                      {command.preview}
+                                    </div>
+                                    <div className="palette-item-meta">
+                                      <span className="palette-name">
+                                        {command.label}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="palette-shortcut-wrap">
+                                    {command.level === "advanced" && (
+                                      <span className="palette-advanced-tag">
+                                        ADV
+                                      </span>
+                                    )}
+                                    <span className="palette-shortcut">
+                                      {command.shortcut}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </Fragment>
+                        );
+                      })}
                       {filteredCommands.length === 0 && (
                         <div className="palette-empty">No command found.</div>
                       )}

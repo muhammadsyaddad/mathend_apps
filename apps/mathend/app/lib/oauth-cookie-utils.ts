@@ -232,6 +232,27 @@ export const parseOAuthTokens = (raw: string | undefined): OAuthTokenMap => {
         continue;
       }
 
+      if (
+        candidate.copilotAccessToken !== undefined &&
+        typeof candidate.copilotAccessToken !== "string"
+      ) {
+        continue;
+      }
+
+      if (
+        candidate.copilotExpiresAt !== undefined &&
+        typeof candidate.copilotExpiresAt !== "string"
+      ) {
+        continue;
+      }
+
+      if (
+        candidate.copilotRefreshAfter !== undefined &&
+        typeof candidate.copilotRefreshAfter !== "string"
+      ) {
+        continue;
+      }
+
       next[providerId] = {
         accessToken: candidate.accessToken,
         tokenType: candidate.tokenType,
@@ -239,6 +260,9 @@ export const parseOAuthTokens = (raw: string | undefined): OAuthTokenMap => {
         refreshToken: candidate.refreshToken,
         idToken: candidate.idToken,
         expiresAt: candidate.expiresAt,
+        copilotAccessToken: candidate.copilotAccessToken,
+        copilotExpiresAt: candidate.copilotExpiresAt,
+        copilotRefreshAfter: candidate.copilotRefreshAfter,
         updatedAt: candidate.updatedAt,
       };
     }

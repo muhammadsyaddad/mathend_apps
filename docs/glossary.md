@@ -29,10 +29,14 @@ Owner: repo maintainers
 
 - Slash Command Palette
   - In-editor command picker opened by `/` or keyboard trigger.
+- Typst-first Syntax Map
+  - Canonical math command/snippet registry used by palette and natural intent parser.
 - Natural Intent Parser
   - Query-to-math snippet resolver for natural language input.
 - Workspace Actions
   - Structured assistant output (`write`, `append`, `replace`) returned by chat route.
+- Workspace Format Command
+  - Agent panel command `/format` to normalize active file syntax into Typst-first style.
 
 ## Desktop Terms
 

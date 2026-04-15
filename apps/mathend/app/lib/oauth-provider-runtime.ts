@@ -18,11 +18,15 @@ type OAuthProviderRuntimeConfig = {
 
 const readEnv = (name: string): string => process.env[name]?.trim() ?? "";
 
+const DEFAULT_GITHUB_COPILOT_CLIENT_ID = "Ov23li8tweQw6odWQebz";
+
 const getGitHubCopilotConfig = (): OAuthProviderRuntimeConfig => {
   return {
     providerId: "github-copilot",
     providerLabel: getAgentProviderLabel("github-copilot"),
-    clientId: readEnv("MATHEND_GITHUB_COPILOT_CLIENT_ID"),
+    clientId:
+      readEnv("MATHEND_GITHUB_COPILOT_CLIENT_ID") ||
+      DEFAULT_GITHUB_COPILOT_CLIENT_ID,
     clientSecret: readEnv("MATHEND_GITHUB_COPILOT_CLIENT_SECRET"),
     authUrl:
       readEnv("MATHEND_GITHUB_COPILOT_AUTH_URL") ||
@@ -33,7 +37,7 @@ const getGitHubCopilotConfig = (): OAuthProviderRuntimeConfig => {
     deviceCodeUrl:
       readEnv("MATHEND_GITHUB_COPILOT_DEVICE_CODE_URL") ||
       "https://github.com/login/device/code",
-    scope: readEnv("MATHEND_GITHUB_COPILOT_SCOPE") || "read:user user:email",
+    scope: readEnv("MATHEND_GITHUB_COPILOT_SCOPE") || "read:user",
     profileUrl:
       readEnv("MATHEND_GITHUB_COPILOT_PROFILE_URL") ||
       "https://api.github.com/user",

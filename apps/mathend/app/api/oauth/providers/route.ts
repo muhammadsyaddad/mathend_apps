@@ -22,13 +22,15 @@ export async function GET() {
     const hasServerTokenChat =
       chatRuntime?.authMode === "static-token" &&
       Boolean(chatRuntime.staticToken);
+    const oauthChatReady = Boolean(connection);
+    const chatReady = hasServerTokenChat || oauthChatReady;
 
     return {
       id: provider.id,
       label: provider.label,
       configured: isOAuthProviderConfigured(runtime),
       connected: Boolean(connection),
-      chatReady: Boolean(connection) || hasServerTokenChat,
+      chatReady,
       connection,
     };
   });

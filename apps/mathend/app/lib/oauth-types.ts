@@ -42,6 +42,9 @@ export type OAuthTokenSet = {
   refreshToken?: string;
   idToken?: string;
   expiresAt?: string;
+  copilotAccessToken?: string;
+  copilotExpiresAt?: string;
+  copilotRefreshAfter?: string;
   updatedAt: string;
 };
 

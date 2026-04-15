@@ -11,11 +11,21 @@ Mathend adalah workspace catatan matematis dengan **Agent Panel** yang sekarang 
 Editor utama sekarang mendukung mode hybrid:
 
 - Buka command palette dengan `Ctrl+K` atau ketik `/`
-- Cari dengan kata natural (`pecahan`, `integral`, `matriks`, `teorema`, `bukti`, dll)
-- Intent parser otomatis untuk query natural (contoh: `integral 0 sampai tak hingga of e^(-x)`)
+- Typst-first syntax map (fundamental -> advanced) dengan kategori: calculus, vector calculus, linear algebra, ODE/PDE, probability-statistics, complex analysis, transforms, optimization, logic-set, structure
+- Cari dengan kata natural (`pecahan`, `integral`, `jacobian`, `fourier`, `kkt`, `residue`, `svd`, `argmin`, dll)
+- Intent parser otomatis untuk query natural lanjutan (contoh: `jacobian f terhadap x dan y`, `laplace transform of f(t)`, `kkt condition`)
 - Pilih command via keyboard (`Arrow`, `Enter`, `Tab`, `Esc`)
 - Live panel **Paper Preview** di kanan untuk render Typst style (A4-like)
 - Export asli via Typst: `PDF` dan `PNG`
+
+## Typst-first Agent Writing
+
+Agent output sekarang dipaksa lebih rapi untuk math notes:
+
+- System prompt mewajibkan output workspace action yang Typst-first
+- Workspace action (`write/append/replace`) otomatis dinormalisasi (LaTeX umum -> Typst-friendly)
+- Validasi syntax dasar dilakukan saat normalisasi (delimiter, bracket, block hygiene)
+- Command `/format` tersedia di Agent Panel untuk merapikan file aktif secara cepat
 
 Dependensi Typst runtime sudah ditambahkan:
 
@@ -46,6 +56,7 @@ Contoh variabel:
 - `MATHEND_GITHUB_COPILOT_CLIENT_ID`
 - `MATHEND_CLAUDE_CODE_CLIENT_ID`
 - `MATHEND_CLAUDE_CODE_CLIENT_SECRET`
+- `MATHEND_GITHUB_COPILOT_SCOPE` (default: `read:user`)
 - dan endpoint auth/token provider sesuai platform OAuth yang dipakai
 - optional live chat endpoint/model:
   - `MATHEND_GITHUB_COPILOT_CHAT_ENDPOINT`
@@ -60,7 +71,7 @@ Catatan:
 - GitHub Copilot sekarang pakai device authorization flow (kode verifikasi), jadi cukup `MATHEND_GITHUB_COPILOT_CLIENT_ID` dan endpoint default GitHub.
 - `MATHEND_GITHUB_COPILOT_CLIENT_SECRET` tidak wajib untuk flow GitHub device code.
 - Untuk Claude Code AI, isi `AUTH_URL` dan `TOKEN_URL` sesuai penyedia OAuth yang kamu gunakan.
-- Untuk GitHub Copilot chat, kamu bisa pakai OAuth token hasil login, atau set `MATHEND_GITHUB_MODELS_PAT` agar request chat diarahkan ke `models.github.ai`.
+- Chat GitHub Copilot sekarang pakai endpoint Copilot (`api.githubcopilot.com`) dengan token exchange server-side setelah OAuth, jadi user tidak perlu isi PAT per akun.
 
 ## Setup Gumroad license (wajib untuk akses workspace)
 
@@ -98,7 +109,7 @@ Daftarkan URL callback ini pada OAuth app provider terkait.
 - `POST /api/oauth/device/poll` -> polling status device code sampai GitHub login selesai
 - `GET /api/oauth/callback/[providerId]` -> callback + token exchange
 - `POST /api/oauth/disconnect` -> putuskan koneksi provider
-- `POST /api/agent/chat` -> kirim message ke agent panel (provider live jika endpoint tersedia)
+- `POST /api/agent/chat` -> kirim message ke agent panel (JSON biasa, atau NDJSON stream jika `stream: true`)
 - `GET /api/license/status` -> cek status lisensi browser saat ini
 - `POST /api/license/activate` -> aktivasi lisensi Gumroad
 - `POST /api/license/deactivate` -> hapus sesi lisensi browser saat ini

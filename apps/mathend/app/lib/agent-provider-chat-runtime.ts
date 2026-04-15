@@ -26,9 +26,8 @@ export const getAgentProviderChatRuntimeConfig = (
   if (providerId === "github-copilot") {
     const endpoint =
       readEnv("MATHEND_GITHUB_COPILOT_CHAT_ENDPOINT") ||
-      "https://models.github.ai/inference/chat/completions";
-    const model =
-      readEnv("MATHEND_GITHUB_COPILOT_CHAT_MODEL") || "openai/gpt-4o-mini";
+      "https://api.githubcopilot.com/chat/completions";
+    const model = readEnv("MATHEND_GITHUB_COPILOT_CHAT_MODEL") || "gpt-4o-mini";
     const allowOverride = readBoolEnv(
       "MATHEND_GITHUB_MODELS_ALLOW_BROWSER_MODEL_OVERRIDE",
       true,

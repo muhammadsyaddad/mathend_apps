@@ -106,6 +106,9 @@ type WorkspaceCommand =
       replaceWith: string;
     }
   | {
+      kind: "format";
+    }
+  | {
       kind: "help";
     };
 
@@ -150,6 +153,23 @@ type AgentChatResponse = {
   error?: string;
 };
 
+type AgentChatStreamEvent =
+  | {
+      type: "plan";
+      plan?: string;
+    }
+  | {
+      type: "delta";
+      delta?: string;
+    }
+  | ({
+      type: "done";
+    } & AgentChatResponse)
+  | {
+      type: "error";
+      error?: string;
+    };
+
 const GITHUB_PROVIDER_ID = "github-copilot";
 
 const WORKSPACE_TOOL_LABEL = "Workspace Tool";
@@ -164,6 +184,10 @@ const parseWorkspaceCommand = (input: string): WorkspaceCommand | null => {
 
   if (/^\/(help|tools|commands)$/i.test(trimmed)) {
     return { kind: "help" };
+  }
+
+  if (/^\/(format|fmt)\b/i.test(trimmed)) {
+    return { kind: "format" };
   }
 
   if (/^\/(read|cat)\b/i.test(trimmed)) {
@@ -226,6 +250,7 @@ const parseWorkspaceCommand = (input: string): WorkspaceCommand | null => {
 const getWorkspaceHelpText = (): string => {
   return [
     "Workspace commands:",
+    "/format - normalize active file into Typst-first clean syntax",
     "/read - show active file content",
     "/write <content> - replace active file with content",
     "/append <content> - append content at the end",
@@ -235,6 +260,13 @@ const getWorkspaceHelpText = (): string => {
 };
 
 const WORKSPACE_COMMAND_SUGGESTIONS: WorkspaceCommandSuggestion[] = [
+  {
+    id: "ws-format",
+    shortcut: "/format",
+    label: "Format active file",
+    description: "Normalize syntax to Typst-first clean format",
+    insertText: "/format",
+  },
   {
     id: "ws-read",
     shortcut: "/read",
@@ -273,31 +305,7 @@ const WORKSPACE_COMMAND_SUGGESTIONS: WorkspaceCommandSuggestion[] = [
   },
 ];
 
-const GITHUB_MODEL_FALLBACK_OPTIONS: AgentModelOption[] = [
-  {
-    label: "GPT-4o mini",
-    value: "openai/gpt-4o-mini",
-  },
-  {
-    label: "GPT-4.1",
-    value: "openai/gpt-4.1",
-  },
-  {
-    label: "GPT-4.1 mini",
-    value: "openai/gpt-4.1-mini",
-  },
-  {
-    label: "o4-mini",
-    value: "openai/o4-mini",
-  },
-  {
-    label: "gpt-5-chat",
-    value: "openai/gpt-5-chat",
-  },
-];
-
-const DEFAULT_GITHUB_MODEL =
-  GITHUB_MODEL_FALLBACK_OPTIONS[0]?.value ?? "openai/gpt-4o-mini";
+const DEFAULT_GITHUB_MODEL = "";
 
 const createMessageId = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -339,6 +347,13 @@ export default function AgentPanel({
   );
   const [chatError, setChatError] = useState<string | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [sendingSessionId, setSendingSessionId] = useState<string | null>(null);
+  const [thinkingPlanBySession, setThinkingPlanBySession] = useState<
+    Record<string, string>
+  >({});
+  const [streamPreviewBySession, setStreamPreviewBySession] = useState<
+    Record<string, string>
+  >({});
   const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
@@ -347,7 +362,7 @@ export default function AgentPanel({
     useState<PendingDeviceAuth | null>(null);
   const [githubModelOptions, setGithubModelOptions] = useState<
     AgentModelOption[]
-  >(GITHUB_MODEL_FALLBACK_OPTIONS);
+  >([]);
   const [isLoadingGithubModels, setIsLoadingGithubModels] = useState(false);
   const [githubModelsError, setGithubModelsError] = useState<string | null>(
     null,
@@ -364,6 +379,10 @@ export default function AgentPanel({
     () => messagesBySession[currentSessionId] ?? EMPTY_SESSION_MESSAGES,
     [currentSessionId, messagesBySession],
   );
+  const isThinkingInCurrentSession =
+    isSendingMessage && sendingSessionId === currentSessionId;
+  const activeThinkingPlan = thinkingPlanBySession[currentSessionId] ?? "";
+  const activeStreamPreview = streamPreviewBySession[currentSessionId] ?? "";
   const draftMessage = draftBySession[currentSessionId] ?? "";
 
   const appendSessionMessage = useCallback(
@@ -381,6 +400,26 @@ export default function AgentPanel({
       ...previous,
       [sessionId]: value,
     }));
+  }, []);
+
+  const clearThinkingStateForSession = useCallback((sessionId: string) => {
+    setThinkingPlanBySession((previous) => {
+      if (!(sessionId in previous)) {
+        return previous;
+      }
+      const next = { ...previous };
+      delete next[sessionId];
+      return next;
+    });
+
+    setStreamPreviewBySession((previous) => {
+      if (!(sessionId in previous)) {
+        return previous;
+      }
+      const next = { ...previous };
+      delete next[sessionId];
+      return next;
+    });
   }, []);
 
   const clearDevicePollTimer = useCallback(() => {
@@ -524,7 +563,7 @@ export default function AgentPanel({
       );
       const payload = (await response.json()) as AgentModelListResponse;
 
-      if (!response.ok || !payload.models || payload.models.length === 0) {
+      if (!response.ok || !payload.models) {
         throw new Error(payload.error ?? "Failed to fetch GitHub model list.");
       }
 
@@ -533,28 +572,22 @@ export default function AgentPanel({
         if (payload.models?.some((model) => model.value === previous)) {
           return previous;
         }
-        return payload.models?.[0]?.value ?? previous;
+        return payload.models?.[0]?.value ?? "";
       });
-      if (payload.error) {
-        setGithubModelsError(payload.error);
-      }
+      setGithubModelsError(
+        payload.error ??
+          (payload.models.length === 0
+            ? "No GitHub Copilot models available for this account."
+            : null),
+      );
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Failed to fetch GitHub model list.";
       setGithubModelsError(message);
-      setGithubModelOptions(GITHUB_MODEL_FALLBACK_OPTIONS);
-      setSelectedGithubModel((previous) => {
-        if (
-          GITHUB_MODEL_FALLBACK_OPTIONS.some(
-            (model) => model.value === previous,
-          )
-        ) {
-          return previous;
-        }
-        return GITHUB_MODEL_FALLBACK_OPTIONS[0]?.value ?? previous;
-      });
+      setGithubModelOptions([]);
+      setSelectedGithubModel("");
     } finally {
       setIsLoadingGithubModels(false);
     }
@@ -617,7 +650,7 @@ export default function AgentPanel({
     }
 
     viewport.scrollTop = viewport.scrollHeight;
-  }, [messages]);
+  }, [isThinkingInCurrentSession, messages]);
 
   useEffect(() => {
     if (!isProviderMenuOpen) {
@@ -923,6 +956,16 @@ export default function AgentPanel({
           "No active file. Select a note tab first, then run workspace commands.";
       } else {
         switch (workspaceCommand.kind) {
+          case "format": {
+            const didFormat = onOverwriteActiveFile(
+              activeSessionFile.id,
+              activeSessionFile.content,
+            );
+            responseText = didFormat
+              ? `Formatted ${activeSessionFile.title} with Typst-first normalization.`
+              : "Failed to format active file.";
+            break;
+          }
           case "read": {
             responseText = [
               `Reading ${activeSessionFile.title}:`,
@@ -1002,6 +1045,15 @@ export default function AgentPanel({
     setCommandQuery("");
     setActiveCommandIndex(0);
     setIsSendingMessage(true);
+    setSendingSessionId(sessionId);
+    setThinkingPlanBySession((previous) => ({
+      ...previous,
+      [sessionId]: "",
+    }));
+    setStreamPreviewBySession((previous) => ({
+      ...previous,
+      [sessionId]: "",
+    }));
 
     const userMessage: AgentChatMessage = {
       id: createMessageId(),
@@ -1036,10 +1088,140 @@ export default function AgentPanel({
                 content: activeSessionFile.content,
               }
             : undefined,
-          model: isGithubProviderSelected ? selectedGithubModel : undefined,
+          model:
+            isGithubProviderSelected && selectedGithubModel
+              ? selectedGithubModel
+              : undefined,
+          stream: true,
         }),
       });
-      const payload = (await response.json()) as AgentChatResponse;
+
+      const payload = await (async (): Promise<AgentChatResponse> => {
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.includes("application/x-ndjson") || !response.body) {
+          return (await response.json()) as AgentChatResponse;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let donePayload: AgentChatResponse | null = null;
+        let streamError: string | null = null;
+
+        const handleEvent = (event: AgentChatStreamEvent) => {
+          switch (event.type) {
+            case "plan": {
+              if (typeof event.plan === "string") {
+                const planText = event.plan.trim();
+                setThinkingPlanBySession((previous) => ({
+                  ...previous,
+                  [sessionId]: planText,
+                }));
+              }
+              break;
+            }
+            case "delta": {
+              if (typeof event.delta === "string" && event.delta.length > 0) {
+                const deltaText = event.delta;
+                setStreamPreviewBySession((previous) => ({
+                  ...previous,
+                  [sessionId]: `${previous[sessionId] ?? ""}${deltaText}`,
+                }));
+              }
+              break;
+            }
+            case "done": {
+              donePayload = {
+                providerLabel:
+                  typeof event.providerLabel === "string"
+                    ? event.providerLabel
+                    : selectedProvider.label,
+                message: typeof event.message === "string" ? event.message : "",
+                workspaceActions: Array.isArray(event.workspaceActions)
+                  ? event.workspaceActions
+                  : [],
+              };
+              break;
+            }
+            case "error": {
+              streamError =
+                typeof event.error === "string" && event.error.trim().length > 0
+                  ? event.error
+                  : "Failed to send message.";
+              break;
+            }
+          }
+        };
+
+        const processLines = (rawChunk: string) => {
+          buffer += rawChunk;
+          let newlineIndex = buffer.indexOf("\n");
+
+          while (newlineIndex !== -1) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+            newlineIndex = buffer.indexOf("\n");
+
+            if (!line) {
+              continue;
+            }
+
+            try {
+              const event = JSON.parse(line) as AgentChatStreamEvent;
+              if (
+                typeof event === "object" &&
+                event !== null &&
+                "type" in event
+              ) {
+                handleEvent(event);
+              }
+            } catch {
+              continue;
+            }
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          processLines(decoder.decode(value, { stream: true }));
+        }
+
+        processLines(decoder.decode());
+
+        const trailingLine = buffer.trim();
+        if (trailingLine) {
+          try {
+            const event = JSON.parse(trailingLine) as AgentChatStreamEvent;
+            if (
+              typeof event === "object" &&
+              event !== null &&
+              "type" in event
+            ) {
+              handleEvent(event);
+            }
+          } catch {
+            // Ignore malformed trailing payload.
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error(streamError ?? "Failed to send message.");
+        }
+
+        if (streamError) {
+          throw new Error(streamError);
+        }
+
+        if (donePayload) {
+          return donePayload;
+        }
+
+        throw new Error("Stream ended before assistant response was ready.");
+      })();
 
       if (
         !response.ok ||
@@ -1078,6 +1260,8 @@ export default function AgentPanel({
       setChatError(message);
     } finally {
       setIsSendingMessage(false);
+      setSendingSessionId(null);
+      clearThinkingStateForSession(sessionId);
     }
   };
 
@@ -1327,6 +1511,40 @@ export default function AgentPanel({
                   </p>
                 );
               })}
+
+              {isThinkingInCurrentSession && (
+                <>
+                  <p
+                    className="agent-chat-line agent-chat-line-assistant agent-chat-line-thinking"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span className="agent-chat-prefix">{">"}</span>
+                    <span className="agent-thinking-text">
+                      Thinking
+                      <span className="agent-thinking-dots" aria-hidden>
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                    </span>
+                  </p>
+
+                  {activeThinkingPlan && (
+                    <p className="agent-chat-line agent-chat-line-thinking-plan">
+                      <span className="agent-chat-prefix">~</span>
+                      {activeThinkingPlan}
+                    </p>
+                  )}
+
+                  {activeStreamPreview && (
+                    <p className="agent-chat-line agent-chat-line-thinking-preview">
+                      <span className="agent-chat-prefix">{">"}</span>
+                      {activeStreamPreview}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             {chatError && <p className="agent-inline-error">{chatError}</p>}
@@ -1380,7 +1598,7 @@ export default function AgentPanel({
                 <textarea
                   ref={composerRef}
                   className="agent-chat-input"
-                  placeholder="Type prompt or /read /write /append /replace"
+                  placeholder="Type prompt or /format /read /write /append /replace"
                   value={draftMessage}
                   onChange={(event) => {
                     const nextValue = event.target.value;
@@ -1432,22 +1650,28 @@ export default function AgentPanel({
               {isGithubProviderSelected && (
                 <div className="agent-model-row">
                   <span className="agent-model-label">
-                    Model (via GitHub Models)
+                    Model (via GitHub Copilot)
                   </span>
-                  <select
-                    id="github-model"
-                    className="agent-model-select"
-                    value={selectedGithubModel}
-                    onChange={(event) =>
-                      setSelectedGithubModel(event.target.value)
-                    }
-                  >
-                    {githubModelOptions.map((model: AgentModelOption) => (
-                      <option key={model.value} value={model.value}>
-                        {model.label}
-                      </option>
-                    ))}
-                  </select>
+                  {githubModelOptions.length > 0 ? (
+                    <select
+                      id="github-model"
+                      className="agent-model-select"
+                      value={selectedGithubModel}
+                      onChange={(event) =>
+                        setSelectedGithubModel(event.target.value)
+                      }
+                    >
+                      {githubModelOptions.map((model: AgentModelOption) => (
+                        <option key={model.value} value={model.value}>
+                          {model.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="agent-model-hint">
+                      No models available
+                    </span>
+                  )}
                   {isLoadingGithubModels && (
                     <span className="agent-model-hint">Loading...</span>
                   )}

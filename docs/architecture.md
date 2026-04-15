@@ -48,13 +48,16 @@ Owner: repo maintainers
 - Validates provider connection from OAuth cookies.
 - Resolves runtime config from `app/lib/agent-provider-chat-runtime.ts`.
 - Uses live provider call (`agent-chat-live.ts`) when token is available.
+- Supports optional NDJSON streaming events (`plan`, `delta`, `done`, `error`) when client sends `stream: true`.
 - Falls back to mock response generation (`agent-chat.ts`) on failure/no token.
 - Can return structured `workspaceActions` to modify active note content.
 
 ### 3) Math Editing and Export Flow (`apps/mathend` / `apps/desktop`)
 
 - Main editor surface in `app/page.tsx` (and desktop `src/App.tsx`).
-- Slash commands and natural intent parsing map to math snippets.
+- Slash commands and natural intent parsing map to Typst-first math snippets.
+- Syntax map includes advanced domains (vector calculus, ODE/PDE, probability-statistics, complex analysis, transforms, optimization, logic-set).
+- Agent workspace writes are normalized to cleaner Typst-oriented syntax before persistence.
 - Typst runtime (`@myriaddreamin/typst-all-in-one.ts`) renders preview and exports PDF/PNG.
 - Mathend currently persists note/session state in browser storage.
 - Desktop persists note/session state through local SQLite (`src/lib/note-db.ts`).

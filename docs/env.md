@@ -37,7 +37,7 @@ Then fill values in `apps/mathend/.env.local`.
 - `MATHEND_GITHUB_COPILOT_AUTH_URL` (optional, default provided)
 - `MATHEND_GITHUB_COPILOT_TOKEN_URL` (optional, default provided)
 - `MATHEND_GITHUB_COPILOT_DEVICE_CODE_URL` (optional, default provided)
-- `MATHEND_GITHUB_COPILOT_SCOPE` (optional)
+- `MATHEND_GITHUB_COPILOT_SCOPE` (optional, default: `read:user`)
 - `MATHEND_GITHUB_COPILOT_PROFILE_URL` (optional, default provided)
 
 ### Claude Code OAuth
@@ -51,16 +51,18 @@ Then fill values in `apps/mathend/.env.local`.
 
 ### Agent Chat Endpoints
 
-- `MATHEND_GITHUB_COPILOT_CHAT_ENDPOINT` (optional)
-- `MATHEND_GITHUB_COPILOT_CHAT_MODEL` (optional)
+- `MATHEND_GITHUB_COPILOT_CHAT_ENDPOINT` (optional, default: `https://api.githubcopilot.com/chat/completions`)
+- `MATHEND_GITHUB_COPILOT_CHAT_MODEL` (optional, default: `gpt-4o-mini`)
 - `MATHEND_CLAUDE_CODE_CHAT_ENDPOINT` (optional)
 - `MATHEND_CLAUDE_CODE_CHAT_MODEL` (optional)
 
-### GitHub Models Direct Token Mode
+### GitHub Models Direct Token Mode (optional fallback)
 
 - `MATHEND_GITHUB_MODELS_PAT` (optional)
 - `MATHEND_GITHUB_MODELS_ORG` (optional)
 - `MATHEND_GITHUB_MODELS_ALLOW_BROWSER_MODEL_OVERRIDE` (optional)
+
+Default flow now uses OAuth + server-side Copilot token exchange for GitHub Copilot chat, so end users do not need PAT.
 
 ## Variables (`apps/desktop`)
 

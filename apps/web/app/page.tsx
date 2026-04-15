@@ -43,31 +43,31 @@ const workflowSteps = [
 ];
 
 const pricingPlans = [
-  {
-    name: "Starter",
-    price: "$0",
-    period: "/month",
-    target: "For personal notes",
-    features: ["Core editor", "Basic preview", "Local workspace"],
-    cta: "Get Started",
-  },
+  // {
+  //   name: "Starter",
+  //   price: "$0",
+  //   period: "/month",
+  //   target: "For personal notes",
+  //   features: ["Core editor", "Basic preview", "Local workspace"],
+  //   cta: "Get Started",
+  // },
   {
     name: "Pro",
-    price: "$12",
+    price: "$29",
     period: "/month",
     target: "For students and creators",
     features: ["Everything in Starter", "Advanced export", "Priority support"],
     cta: "Start Pro",
     featured: true,
   },
-  {
-    name: "Team",
-    price: "$39",
-    period: "/month",
-    target: "For labs and teams",
-    features: ["Shared workspace", "Admin controls", "Dedicated onboarding"],
-    cta: "Talk to Sales",
-  },
+  // {
+  //   name: "Team",
+  //   price: "$39",
+  //   period: "/month",
+  //   target: "For labs and teams",
+  //   features: ["Shared workspace", "Admin controls", "Dedicated onboarding"],
+  //   cta: "Talk to Sales",
+  // },
 ];
 
 const faqs = [
@@ -146,22 +146,12 @@ export default function Home() {
                   priority
                 />
               </div>
-              <figcaption className={styles.caption}>
-                built for deep focus
-              </figcaption>
             </figure>
-          </section>
-
-          <section className={styles.logoStrip}>
-            <p>Used by students, tutors, researchers, and technical teams.</p>
           </section>
 
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <p className={styles.sectionKicker}>product</p>
-              <h2 className={styles.sectionTitle}>
-                Everything you need for a clear math workflow.
-              </h2>
             </div>
             <div className={styles.features}>
               {featureItems.map((item) => (
@@ -176,9 +166,6 @@ export default function Home() {
           <section className={styles.section} id="workflow">
             <div className={styles.sectionHead}>
               <p className={styles.sectionKicker}>workflow</p>
-              <h2 className={styles.sectionTitle}>
-                Three steps from draft to final output.
-              </h2>
             </div>
             <div className={styles.workflow}>
               {workflowSteps.map((item, index) => (
@@ -194,9 +181,6 @@ export default function Home() {
           <section className={styles.section} id="pricing">
             <div className={styles.sectionHead}>
               <p className={styles.sectionKicker}>pricing</p>
-              <h2 className={styles.sectionTitle}>
-                Simple plans for solo and team work.
-              </h2>
             </div>
             <div className={styles.pricingGrid}>
               {pricingPlans.map((plan) => (
@@ -219,7 +203,18 @@ export default function Home() {
                       <li key={feature}>{feature}</li>
                     ))}
                   </ul>
-                  <a className={styles.planCta} href="#start">
+                  <a
+                    className={styles.planCta}
+                    href={
+                      plan.name === "Pro"
+                        ? "https://muhamsyad.gumroad.com/l/mathend"
+                        : "#start"
+                    }
+                    target={plan.name === "Pro" ? "_blank" : undefined}
+                    rel={
+                      plan.name === "Pro" ? "noopener noreferrer" : undefined
+                    }
+                  >
                     {plan.cta}
                   </a>
                 </article>
@@ -230,7 +225,6 @@ export default function Home() {
           <section className={styles.section} id="faq">
             <div className={styles.sectionHead}>
               <p className={styles.sectionKicker}>faq</p>
-              <h2 className={styles.sectionTitle}>Common questions.</h2>
             </div>
             <div className={styles.faqList}>
               {faqs.map((item) => (
@@ -244,14 +238,8 @@ export default function Home() {
 
           <section className={styles.finalCta} id="start">
             <h2>Write faster. Publish cleaner. Stay focused.</h2>
-            <div className={styles.actions}>
-              <a className={styles.primary} href="#pricing">
-                choose a plan
-              </a>
-              <a className={styles.secondary} href="#product">
-                explore product
-              </a>
-            </div>
+
+            <div className={styles.actions}></div>
           </section>
         </main>
 

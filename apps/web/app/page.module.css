@@ -47,14 +47,17 @@
 }
 
 .hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
   padding: 1.2rem;
+  width: 100%;
 }
 
 .heroContent {
   display: flex;
+  max-width: 100%;
   flex-direction: column;
 }
 
@@ -72,11 +75,11 @@
 .title {
   margin-top: 0.8rem;
   font-family: var(--font-geist-sans), "Geist", sans-serif;
-  font-size: clamp(2.1rem, 4.8vw, 4.1rem);
+  font-size: clamp(2.1rem, 4.8vw, 5rem);
   line-height: 0.94;
   letter-spacing: -0.02em;
   font-weight: 700;
-  max-width: 13ch;
+  max-width: 100%;
 }
 
 .description {
@@ -146,6 +149,7 @@
 
 .heroVisual {
   min-width: 0;
+  margin-bottom: 4rem;
 }
 
 .imageFrame {
@@ -170,7 +174,7 @@
 }
 
 .logoStrip {
-  margin-top: 0.9rem;
+  margin-top: 4rem;
   padding: 0.2rem 0;
 }
 
@@ -183,13 +187,13 @@
 }
 
 .section {
-  margin-top: 0.9rem;
+  margin-top: 1rem;
   padding: 0;
 }
 
 .sectionHead {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.1rem;
@@ -197,14 +201,14 @@
 }
 
 .sectionTitle {
-  margin-left: auto;
+  margin-left: 0;
   font-family: var(--font-geist-sans), "Geist", sans-serif;
   font-size: clamp(1.4rem, 2.4vw, 2rem);
   line-height: 1.04;
   letter-spacing: -0.01em;
   font-weight: 700;
   max-width: 30ch;
-  text-align: right;
+  text-align: left;
 }
 
 .features {
@@ -252,12 +256,15 @@
 }
 
 .pricingGrid {
-  display: grid;
+  display: flex;
+  justify-content: center;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
 }
 
 .plan {
+  width: 100%;
+  max-width: 400px;
   min-height: 21rem;
   padding: 1.1rem;
   display: flex;
@@ -318,17 +325,38 @@
 }
 
 .finalCta {
+  position: relative;
+  overflow: hidden;
   margin-top: 0.9rem;
   padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.finalCta::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%; /* Sesuaikan seberapa tinggi 'kabut' hitamnya */
+  background: linear-gradient(to top, #000 10%, transparent 100%);
+  pointer-events: none; /* Supaya teks di bawahnya tetap bisa di-highlight/klik */
+  z-index: 2; /* Memastikan dia berada di atas teks */
 }
 
 .finalCta h2 {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-geist-sans), "Geist", sans-serif;
-  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-size: clamp(2.5rem, 6vw, 6rem);
   line-height: 0.96;
   letter-spacing: -0.02em;
   font-weight: 700;
   max-width: 22ch;
+  margin-bottom: 2rem;
 }
 
 .footer {

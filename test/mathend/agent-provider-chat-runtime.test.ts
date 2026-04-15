@@ -13,7 +13,7 @@ describe("agent-provider-chat-runtime github-copilot", () => {
     resetGithubEnv();
   });
 
-  it("defaults to GitHub Models endpoint without PAT", () => {
+  it("defaults to GitHub Copilot chat endpoint without PAT", () => {
     resetGithubEnv();
 
     const config = getAgentProviderChatRuntimeConfig("github-copilot");
@@ -21,9 +21,9 @@ describe("agent-provider-chat-runtime github-copilot", () => {
     expect(config).not.toBeNull();
     expect(config?.authMode).toBe("oauth-token");
     expect(config?.endpoint).toBe(
-      "https://models.github.ai/inference/chat/completions",
+      "https://api.githubcopilot.com/chat/completions",
     );
-    expect(config?.model).toBe("openai/gpt-4o-mini");
+    expect(config?.model).toBe("gpt-4o-mini");
   });
 
   it("uses static token mode when PAT is provided", () => {

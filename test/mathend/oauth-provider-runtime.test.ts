@@ -10,6 +10,7 @@ const resetGithubOauthEnv = () => {
   delete process.env.MATHEND_GITHUB_COPILOT_AUTH_URL;
   delete process.env.MATHEND_GITHUB_COPILOT_TOKEN_URL;
   delete process.env.MATHEND_GITHUB_COPILOT_DEVICE_CODE_URL;
+  delete process.env.MATHEND_GITHUB_COPILOT_SCOPE;
 };
 
 describe("oauth-provider-runtime github-copilot", () => {
@@ -28,11 +29,13 @@ describe("oauth-provider-runtime github-copilot", () => {
     expect(isOAuthProviderConfigured(config)).toBe(true);
   });
 
-  it("returns not configured when github client id is missing", () => {
+  it("uses built-in default GitHub Copilot app client id", () => {
     resetGithubOauthEnv();
 
     const config = getOAuthProviderRuntimeConfig("github-copilot");
 
-    expect(isOAuthProviderConfigured(config)).toBe(false);
+    expect(config.clientId).toBe("Ov23li8tweQw6odWQebz");
+    expect(config.scope).toBe("read:user");
+    expect(isOAuthProviderConfigured(config)).toBe(true);
   });
 });

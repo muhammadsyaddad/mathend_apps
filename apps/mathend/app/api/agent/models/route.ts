@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { resolveGitHubCopilotAccessToken } from "../../../lib/agent-copilot-token";
 import { getAgentProviderChatRuntimeConfig } from "../../../lib/agent-provider-chat-runtime";
 import { isAgentProviderId } from "../../../lib/agent-providers";
 import { parseOAuthTokens } from "../../../lib/oauth-cookie-utils";
@@ -16,7 +17,13 @@ type GitHubCatalogModel = {
   supported_output_modalities?: unknown;
 };
 
+type CopilotModelItem = {
+  id?: unknown;
+  name?: unknown;
+};
+
 const GITHUB_MODEL_CATALOG_URL = "https://models.github.ai/catalog/models";
+const COPILOT_MODEL_CATALOG_URL = "https://api.githubcopilot.com/models";
 
 const GITHUB_MODEL_FALLBACK_OPTIONS: AgentModelOption[] = [
   { label: "GPT-4o mini", value: "openai/gpt-4o-mini" },
@@ -103,6 +110,41 @@ const readGitHubCatalogModels = (payload: unknown): AgentModelOption[] => {
   return dedupeModels(models);
 };
 
+const readGitHubCopilotModels = (payload: unknown): AgentModelOption[] => {
+  if (typeof payload !== "object" || payload === null) {
+    return [];
+  }
+
+  const candidate = payload as { data?: unknown };
+  if (!Array.isArray(candidate.data)) {
+    return [];
+  }
+
+  const models: AgentModelOption[] = [];
+  for (const item of candidate.data as CopilotModelItem[]) {
+    const modelId = typeof item.id === "string" ? item.id.trim() : "";
+    if (!modelId) {
+      continue;
+    }
+
+    const modelName = typeof item.name === "string" ? item.name.trim() : "";
+    models.push({
+      value: modelId,
+      label: displayModelLabel(modelId, modelName),
+    });
+  }
+
+  return dedupeModels(models);
+};
+
+const normalizeCopilotModelId = (modelId: string): string => {
+  const trimmed = modelId.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return trimmed.replace(/^[^/]+\//, "").trim();
+};
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const providerIdRaw = requestUrl.searchParams.get("providerId") ?? "";
@@ -121,11 +163,93 @@ export async function GET(request: Request) {
   const tokenMap = parseOAuthTokens(
     cookieStore.get(OAUTH_TOKENS_COOKIE)?.value,
   );
-  const oauthToken = tokenMap[providerIdRaw]?.accessToken;
+  const tokenSet = tokenMap[providerIdRaw];
+  const oauthToken = tokenSet?.accessToken;
+  const copilotToken = tokenSet?.copilotAccessToken;
+  const copilotRefreshAfter = tokenSet?.copilotRefreshAfter;
+  const copilotTokenValid =
+    Boolean(copilotToken) &&
+    (!copilotRefreshAfter || Date.now() < Date.parse(copilotRefreshAfter));
   const authToken =
     runtimeConfig?.authMode === "static-token" && runtimeConfig.staticToken
       ? runtimeConfig.staticToken
-      : oauthToken;
+      : copilotTokenValid
+        ? copilotToken
+        : oauthToken;
+
+  const runtimeModel = runtimeConfig?.endpoint.includes("api.githubcopilot.com")
+    ? normalizeCopilotModelId(runtimeConfig?.model ?? "")
+    : (runtimeConfig?.model ?? "").trim();
+
+  const readModelsWithFallback = (
+    parsedModels: AgentModelOption[],
+    fallbackModels: AgentModelOption[],
+    fallbackError: string,
+  ) => {
+    const models = withRuntimeModel(parsedModels, runtimeModel);
+    if (models.length > 0) {
+      return NextResponse.json({ models });
+    }
+
+    return NextResponse.json({
+      models: withRuntimeModel(fallbackModels, runtimeModel),
+      error: fallbackError,
+    });
+  };
+
+  const readCopilotModelsWithoutFallback = (
+    parsedModels: AgentModelOption[],
+    unavailableError: string,
+  ) => {
+    const models = dedupeModels(parsedModels);
+    if (models.length > 0) {
+      return NextResponse.json({ models });
+    }
+
+    return NextResponse.json({
+      models: [],
+      error: unavailableError,
+    });
+  };
+
+  if (
+    runtimeConfig?.authMode === "oauth-token" &&
+    runtimeConfig.endpoint.includes("api.githubcopilot.com") &&
+    oauthToken
+  ) {
+    try {
+      const copilotTokenResult = await resolveGitHubCopilotAccessToken({
+        oauthAccessToken: oauthToken,
+        tokenSet,
+      });
+      const copilotResponse = await fetch(COPILOT_MODEL_CATALOG_URL, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${copilotTokenResult.accessToken}`,
+          "User-Agent": "Mathend-Copilot-Bridge",
+        },
+        cache: "no-store",
+      });
+
+      if (!copilotResponse.ok) {
+        throw new Error("GitHub Copilot model catalog request failed.");
+      }
+
+      const payload = (await copilotResponse.json()) as unknown;
+      const parsedModels = readGitHubCopilotModels(payload);
+      return readCopilotModelsWithoutFallback(
+        parsedModels,
+        "No GitHub Copilot models available for this account.",
+      );
+    } catch {
+      return NextResponse.json({
+        models: [],
+        error:
+          "Unable to fetch GitHub Copilot models. Reconnect OAuth and try again.",
+      });
+    }
+  }
 
   try {
     const response = await fetch(GITHUB_MODEL_CATALOG_URL, {
@@ -143,19 +267,14 @@ export async function GET(request: Request) {
 
     const payload = (await response.json()) as unknown;
     const parsedModels = readGitHubCatalogModels(payload);
-    const models = withRuntimeModel(parsedModels, runtimeConfig?.model);
-    if (models.length === 0) {
-      throw new Error("GitHub model catalog is empty.");
-    }
-
-    return NextResponse.json({ models });
-  } catch {
-    const fallbackModels = withRuntimeModel(
+    return readModelsWithFallback(
+      parsedModels,
       GITHUB_MODEL_FALLBACK_OPTIONS,
-      runtimeConfig?.model,
+      "Using fallback model list because live catalog is unavailable.",
     );
+  } catch {
     return NextResponse.json({
-      models: fallbackModels,
+      models: withRuntimeModel(GITHUB_MODEL_FALLBACK_OPTIONS, runtimeModel),
       error: "Using fallback model list because live catalog is unavailable.",
     });
   }

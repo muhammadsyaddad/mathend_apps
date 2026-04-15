@@ -64,7 +64,7 @@ describe("mathend home page", () => {
       },
     });
 
-    expect(screen.getByText("Math Commands")).toBeInTheDocument();
+    expect(screen.getByLabelText("Math commands")).toBeInTheDocument();
 
     fireEvent.keyDown(textarea, { key: "Enter" });
 
