@@ -68,6 +68,93 @@ const replaceLatexIntervals = (input: string): string => {
     .replaceAll(/_\{([^{}]+)\}/g, "_($1)");
 };
 
+const SUPERSCRIPT_CHARACTER_MAP: Record<string, string> = {
+  "0": "⁰",
+  "1": "¹",
+  "2": "²",
+  "3": "³",
+  "4": "⁴",
+  "5": "⁵",
+  "6": "⁶",
+  "7": "⁷",
+  "8": "⁸",
+  "9": "⁹",
+  "+": "⁺",
+  "-": "⁻",
+  "=": "⁼",
+  "(": "⁽",
+  ")": "⁾",
+  a: "ᵃ",
+  b: "ᵇ",
+  c: "ᶜ",
+  d: "ᵈ",
+  e: "ᵉ",
+  f: "ᶠ",
+  g: "ᵍ",
+  h: "ʰ",
+  i: "ⁱ",
+  j: "ʲ",
+  k: "ᵏ",
+  l: "ˡ",
+  m: "ᵐ",
+  n: "ⁿ",
+  o: "ᵒ",
+  p: "ᵖ",
+  r: "ʳ",
+  s: "ˢ",
+  t: "ᵗ",
+  u: "ᵘ",
+  v: "ᵛ",
+  w: "ʷ",
+  x: "ˣ",
+  y: "ʸ",
+  z: "ᶻ",
+  A: "ᴬ",
+  B: "ᴮ",
+  D: "ᴰ",
+  E: "ᴱ",
+  G: "ᴳ",
+  H: "ᴴ",
+  I: "ᴵ",
+  J: "ᴶ",
+  K: "ᴷ",
+  L: "ᴸ",
+  M: "ᴹ",
+  N: "ᴺ",
+  O: "ᴼ",
+  P: "ᴾ",
+  R: "ᴿ",
+  T: "ᵀ",
+  U: "ᵁ",
+  V: "ⱽ",
+  W: "ᵂ",
+};
+
+const canConvertToSuperscript = (value: string): boolean => {
+  return value
+    .split("")
+    .every((character) => Boolean(SUPERSCRIPT_CHARACTER_MAP[character]));
+};
+
+const toSuperscript = (value: string): string => {
+  return value
+    .split("")
+    .map((character) => SUPERSCRIPT_CHARACTER_MAP[character])
+    .join("");
+};
+
+const replaceSimpleCaretExponents = (input: string): string => {
+  return input.replaceAll(
+    /(^|[^\\])\^([A-Za-z0-9+\-=()]+)/g,
+    (_match, prefix: string, exponent: string) => {
+      if (!canConvertToSuperscript(exponent)) {
+        return `${prefix}^${exponent}`;
+      }
+      return `${prefix}${toSuperscript(exponent)}`;
+    },
+  );
+};
+
 const normalizeMathPunctuation = (input: string): string => {
   return input
     .replaceAll(/\s+([,.;:])/g, "$1")
@@ -161,6 +248,7 @@ export const normalizeMathContent = (
   output = replaceLatexRoots(output);
   output = replaceLatexTextCommands(output);
   output = replaceLatexIntervals(output);
+  output = replaceSimpleCaretExponents(output);
   output = normalizeHeadingSpace(output);
   output = normalizeLinewiseLayout(output);
   output = normalizeMathPunctuation(output);
@@ -180,6 +268,10 @@ export const normalizeMathContent = (
   }
 
   return output.trim();
+};
+
+export const normalizeMathEditorDisplay = (value: string): string => {
+  return replaceSimpleCaretExponents(value);
 };
 
 export type MathValidationIssue = {

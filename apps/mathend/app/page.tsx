@@ -20,7 +20,11 @@ import {
   isAdvancedIntentQuery,
   type MathCommandItem as CommandItem,
 } from "./lib/math-command-map";
-import { normalizeMathContent, validateMathContent } from "./lib/math-content";
+import {
+  normalizeMathContent,
+  normalizeMathEditorDisplay,
+  validateMathContent,
+} from "./lib/math-content";
 import { computePalettePlacement } from "./lib/palette-position";
 import type { LicenseStatusResponse } from "./lib/license-types";
 
@@ -146,19 +150,80 @@ const escapeTypstText = (value: string): string => {
     .replaceAll("$", "\\$");
 };
 
+const stripListPrefixForMathDetection = (value: string): string => {
+  return value.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, "").trim();
+};
+
 const looksLikeMathLine = (line: string): boolean => {
   const trimmed = line.trim();
   if (!trimmed) {
     return false;
   }
 
-  if (/^(?:\[.*\]|\{.*\}|\(.*\))$/.test(trimmed) && /[=<>^_]/.test(trimmed)) {
+  const candidate = stripListPrefixForMathDetection(trimmed);
+  if (!candidate) {
+    return false;
+  }
+
+  if (
+    /^(?:\[.*\]|\{.*\}|\(.*\))$/.test(candidate) &&
+    /[=<>^_]/.test(candidate)
+  ) {
     return true;
   }
 
-  return /[∫∬∭∮∯∑∏√∞π∂∇⋅×≤≥≈≠→]|\b(lim|det|matrix|grad|curl|div|d\/dx)\b|frac\(|sqrt\(|root\(|arg\s+(?:min|max)|Var\(|Cov\(|E\[|L\{|Res\(|[=^_]/i.test(
-    trimmed,
+  const hasStrongMathToken =
+    /[∫∬∭∮∯∑∏√∞π∂∇⋅×≤≥≈≠→]|\b(lim|det|matrix|grad|curl|div|d\/dx)\b|frac\(|sqrt\(|root\(|arg\s+(?:min|max)|Var\(|Cov\(|E\[|L\{|Res\(/i.test(
+      candidate,
+    );
+
+  if (hasStrongMathToken) {
+    return true;
+  }
+
+  const hasSuperscriptOrSubscriptToken = /[\^_]|[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾]/.test(
+    candidate,
   );
+  const hasComparison = /(?:<=|>=|==|!=|=|<|>|≤|≥|≈|≠)/.test(candidate);
+  const hasArithmetic =
+    /\s[+\-*/]\s/.test(candidate) || /\d\s*\/\s*\d/.test(candidate);
+
+  if (!hasSuperscriptOrSubscriptToken && !hasComparison && !hasArithmetic) {
+    return false;
+  }
+
+  const letterCount = (candidate.match(/[A-Za-z]/g) ?? []).length;
+  const longWordCount = (candidate.match(/[A-Za-z]{4,}/g) ?? []).length;
+  const sentencePunctuationCount = (candidate.match(/[,:;.!?]/g) ?? []).length;
+  const comparisonCount = (
+    candidate.match(/(?:<=|>=|==|!=|=|<|>|≤|≥|≈|≠)/g) ?? []
+  ).length;
+  const arithmeticCount = (candidate.match(/\s[+\-*/]\s/g) ?? []).length;
+  const operatorWeight =
+    comparisonCount +
+    arithmeticCount +
+    (hasSuperscriptOrSubscriptToken ? 1 : 0);
+
+  const looksLikeSentence =
+    longWordCount >= 3 &&
+    sentencePunctuationCount >= 1 &&
+    comparisonCount <= 1 &&
+    arithmeticCount === 0 &&
+    !hasSuperscriptOrSubscriptToken;
+
+  if (looksLikeSentence) {
+    return false;
+  }
+
+  if (
+    letterCount >= 30 &&
+    operatorWeight <= 1 &&
+    !hasSuperscriptOrSubscriptToken
+  ) {
+    return false;
+  }
+
+  return true;
 };
 
 const buildTypstDocument = (title: string, content: string): string => {
@@ -747,7 +812,9 @@ export default function Home() {
       updateNoteById(noteId, (note) => ({
         ...note,
         content: [normalizedContent],
-        subtitle: getNoteSubtitle(normalizedContent),
+        subtitle: getNoteSubtitle(
+          normalizeMathEditorDisplay(normalizedContent),
+        ),
       }));
       return true;
     },
@@ -970,18 +1037,19 @@ export default function Home() {
 
   const handleEditorChange = useCallback(
     (nextValue: string, cursorPosition: number) => {
+      const normalizedDisplay = normalizeMathEditorDisplay(nextValue);
       updateSelectedNote((note) => ({
         ...note,
-        content: [nextValue],
-        subtitle: getNoteSubtitle(nextValue),
+        content: [normalizedDisplay],
+        subtitle: getNoteSubtitle(normalizedDisplay),
       }));
 
       if (isPaletteOpen && paletteTrigger?.source === "manual") {
-        evaluateManualTrigger(nextValue, cursorPosition);
+        evaluateManualTrigger(normalizedDisplay, cursorPosition);
         return;
       }
 
-      evaluateSlashTrigger(nextValue, cursorPosition);
+      evaluateSlashTrigger(normalizedDisplay, cursorPosition);
     },
     [
       evaluateManualTrigger,

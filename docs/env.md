@@ -1,6 +1,6 @@
 # Environment Variables
 
-Last updated: 2026-04-11
+Last updated: 2026-04-15
 Owner: repo maintainers
 
 ## Policy
@@ -9,6 +9,12 @@ Owner: repo maintainers
 - Use `apps/mathend/.env.example` as the baseline template.
 - Keep local values in `apps/mathend/.env.local`.
 - Treat `.env` as local-only.
+
+Templates:
+
+- `apps/mathend/.env.example`
+- `apps/web/.env.example`
+- `apps/desktop/.env.example`
 
 ## Setup
 
@@ -72,6 +78,57 @@ Default flow now uses OAuth + server-side Copilot token exchange for GitHub Copi
 - `VITE_GUMROAD_API_BASE` (optional, default: `https://api.gumroad.com`)
 - `VITE_GUMROAD_CHECKOUT_URL` (optional, default: `https://muhamsyad.gumroad.com/l/mathend`)
 - `VITE_LICENSE_REVERIFY_DAYS` (optional, default: `7`)
+
+## Variables (`apps/web`)
+
+### Gumroad Licensing (Web download gate)
+
+- `GUMROAD_PRODUCT_ID` (required)
+- `GUMROAD_API_BASE` (optional, default: `https://api.gumroad.com`)
+- `GUMROAD_CHECKOUT_URL` (optional, default: `https://muhamsyad.gumroad.com/l/mathend`)
+- `LICENSE_COOKIE_SECRET` (required, signing key for web license session cookie)
+- `LICENSE_REVERIFY_DAYS` (optional, default: `7`)
+
+### Strict Desktop Download Gate (Web)
+
+- `WEB_DOWNLOAD_WINDOWS_URL` (auto-managed by desktop release workflow; points to private GitHub release asset API URL)
+- `WEB_DOWNLOAD_MACOS_URL` (auto-managed by desktop release workflow; points to private GitHub release asset API URL)
+- `WEB_DOWNLOAD_LINUX_URL` (auto-managed by desktop release workflow; points to private GitHub release asset API URL)
+- `WEB_DOWNLOAD_WINDOWS_FILENAME` (recommended; auto-managed per release)
+- `WEB_DOWNLOAD_MACOS_FILENAME` (recommended; auto-managed per release)
+- `WEB_DOWNLOAD_LINUX_FILENAME` (recommended; auto-managed per release)
+- `WEB_DOWNLOAD_TOKEN_SECRET` (optional; fallback to `LICENSE_COOKIE_SECRET`)
+- `WEB_DOWNLOAD_TOKEN_TTL_SECONDS` (optional, default: `300`, clamped `30..3600`)
+- `WEB_DOWNLOAD_UPSTREAM_BEARER_TOKEN` (required for private upstream; read-only GitHub token used by web proxy route)
+
+## Auto-Managed vs Static (`apps/web`)
+
+Static env (set once, manually managed):
+
+- `GUMROAD_PRODUCT_ID`
+- `GUMROAD_API_BASE`
+- `GUMROAD_CHECKOUT_URL`
+- `LICENSE_COOKIE_SECRET`
+- `LICENSE_REVERIFY_DAYS`
+- `WEB_DOWNLOAD_TOKEN_SECRET`
+- `WEB_DOWNLOAD_TOKEN_TTL_SECONDS`
+- `WEB_DOWNLOAD_UPSTREAM_BEARER_TOKEN`
+
+Auto-managed env (updated every desktop release by `.github/workflows/desktop-release.yml`):
+
+- `WEB_DOWNLOAD_WINDOWS_URL`
+- `WEB_DOWNLOAD_MACOS_URL`
+- `WEB_DOWNLOAD_LINUX_URL`
+- `WEB_DOWNLOAD_WINDOWS_FILENAME`
+- `WEB_DOWNLOAD_MACOS_FILENAME`
+- `WEB_DOWNLOAD_LINUX_FILENAME`
+
+Notes:
+
+- Auto-managed values target Vercel `production` environment.
+- URL values use GitHub API asset endpoint format: `https://api.github.com/repos/<owner>/<private-repo>/releases/assets/<asset_id>`.
+- Web proxy route must send `Authorization: Bearer <WEB_DOWNLOAD_UPSTREAM_BEARER_TOKEN>` and GitHub asset download headers to stream binaries reliably.
+- Use separate tokens: `BINARIES_REPO_TOKEN_WRITE` for GitHub Actions publish, `WEB_DOWNLOAD_UPSTREAM_BEARER_TOKEN` as read-only token in Vercel.
 
 ## OAuth Callback URLs (local)
 

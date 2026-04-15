@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Mathend Web (Marketing + Strict Download Gate)
 
-## Getting Started
+`apps/web` is the public marketing website and the canonical license-first
+download portal for Mathend Desktop.
 
-First, run the development server:
+## Scope
+
+- Marketing landing page (`app/page.tsx`)
+- Download center (`app/download/page.tsx`)
+- License session API (`app/api/license/**`)
+- Strict installer gate API (`app/api/download/**`)
+
+## Local Run
+
+From monorepo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun run --filter web dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Web app runs on `http://localhost:3001`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+1. Create local env file:
 
-## Learn More
+```bash
+cp apps/web/.env.example apps/web/.env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. Fill required values:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+GUMROAD_PRODUCT_ID=
+LICENSE_COOKIE_SECRET=
+WEB_DOWNLOAD_WINDOWS_URL=
+WEB_DOWNLOAD_MACOS_URL=
+WEB_DOWNLOAD_LINUX_URL=
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Optional values:
 
-## Deploy on Vercel
+```bash
+GUMROAD_API_BASE=https://api.gumroad.com
+GUMROAD_CHECKOUT_URL=https://muhamsyad.gumroad.com/l/mathend
+LICENSE_REVERIFY_DAYS=7
+WEB_DOWNLOAD_TOKEN_SECRET=
+WEB_DOWNLOAD_TOKEN_TTL_SECONDS=300
+WEB_DOWNLOAD_WINDOWS_FILENAME=
+WEB_DOWNLOAD_MACOS_FILENAME=
+WEB_DOWNLOAD_LINUX_FILENAME=
+WEB_DOWNLOAD_UPSTREAM_BEARER_TOKEN=
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Strict Download Flow
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Buyer opens `/download`
+2. Buyer activates Gumroad license (`POST /api/license/activate`)
+3. Frontend asks catalog (`GET /api/download/catalog`)
+4. API returns short-lived, signed links per platform
+5. Buyer downloads via `GET /api/download/file?platform=...&token=...`
+6. Route re-validates token + license session, then streams installer
+
+Desktop app still has in-app activation gate after installation.
+
+## Verify
+
+```bash
+bun run --filter web lint
+bun run --filter web check-types
+```

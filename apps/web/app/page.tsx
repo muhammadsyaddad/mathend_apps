@@ -99,6 +99,7 @@ export default function Home() {
             <a href="#workflow">workflow</a>
             <a href="#pricing">pricing</a>
             <a href="#faq">faq</a>
+            <a href="/download">download</a>
             <a href="#start">start</a>
           </nav>
         </header>
@@ -115,13 +116,14 @@ export default function Home() {
                 math-heavy documents without wrestling with your tools.
               </p>
               <div className={styles.actions}>
-                <a className={styles.primary} href="#start">
-                  start free
+                <a className={styles.primary} href="/download">
+                  unlock download
                 </a>
-                <a className={styles.secondary} href="#workflow">
-                  view workflow
+                <a className={styles.secondary} href="#pricing">
+                  see pricing
                 </a>
               </div>
+
               <div className={styles.metrics}>
                 <p>
                   <strong>12k+</strong> active writers
@@ -205,15 +207,7 @@ export default function Home() {
                   </ul>
                   <a
                     className={styles.planCta}
-                    href={
-                      plan.name === "Pro"
-                        ? "https://muhamsyad.gumroad.com/l/mathend"
-                        : "#start"
-                    }
-                    target={plan.name === "Pro" ? "_blank" : undefined}
-                    rel={
-                      plan.name === "Pro" ? "noopener noreferrer" : undefined
-                    }
+                    href={plan.name === "Pro" ? "/download" : "#start"}
                   >
                     {plan.cta}
                   </a>
@@ -238,8 +232,6 @@ export default function Home() {
 
           <section className={styles.finalCta} id="start">
             <h2>Write faster. Publish cleaner. Stay focused.</h2>
-
-            <div className={styles.actions}></div>
           </section>
         </main>
 

@@ -1,0 +1,301 @@
+.page {
+  min-height: 100svh;
+  color: #f4f1eb;
+  /* Flat background: replace the gradient with a single solid color */
+  background: #090a0c;
+}
+
+.container {
+  width: min(1080px, 100% - 2rem);
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand {
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.topLinks {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topLinks a,
+.topLinks button {
+  border: 1px solid rgba(244, 241, 235, 0.22);
+  background: rgba(255, 255, 255, 0.02);
+  color: #f4f1eb;
+  /* ensure anchors/buttons are vertically centered like other buttons */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0 0.9rem;
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.69rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hero {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.kicker {
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.title {
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: clamp(2rem, 5.4vw, 4.2rem);
+  line-height: 0.97;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+
+.description {
+  max-width: 60ch;
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  opacity: 0.9;
+}
+
+.card {
+  margin-top: 1.2rem;
+  border: 1px solid rgba(244, 241, 235, 0.2);
+  background: rgba(7, 10, 13, 0.72);
+  backdrop-filter: blur(4px);
+  padding: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.statusLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.statusPill {
+  border: 1px solid rgba(244, 241, 235, 0.24);
+  padding: 0.35rem 0.55rem;
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statusOk {
+  border-color: rgba(151, 197, 112, 0.5);
+  color: #b6e18f;
+}
+
+.statusWarn {
+  border-color: rgba(226, 172, 85, 0.5);
+  color: #f1c078;
+}
+
+.copy {
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.infoCard {
+  border: 1px solid rgba(244, 241, 235, 0.18);
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.infoLabel {
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.infoValue {
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.button,
+.buttonGhost,
+.downloadButton {
+  min-height: 2.5rem;
+  border: 1px solid rgba(244, 241, 235, 0.28);
+  padding: 0 0.95rem;
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button {
+  background: #e8d7be;
+  border-color: #e8d7be;
+  color: #18110a;
+}
+
+.buttonGhost {
+  background: transparent;
+  color: #f4f1eb;
+}
+
+.downloadGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.downloadItem {
+  border: 1px solid rgba(244, 241, 235, 0.2);
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.downloadLabel {
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 1rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.downloadMeta {
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.downloadButton {
+  margin-top: 0.15rem;
+  width: 100%;
+  background: transparent;
+  color: #f4f1eb;
+}
+
+.form {
+  display: grid;
+  gap: 0.65rem;
+  max-width: 600px;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field span {
+  font-family: var(--font-geist-mono), "Geist Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.field input {
+  min-height: 2.6rem;
+  border: 1px solid rgba(244, 241, 235, 0.22);
+  background: rgba(255, 255, 255, 0.02);
+  color: #f4f1eb;
+  padding: 0 0.75rem;
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 0.92rem;
+}
+
+.error {
+  border: 1px solid rgba(228, 130, 119, 0.45);
+  color: #ffb9af;
+  padding: 0.7rem;
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 0.9rem;
+}
+
+.warning {
+  border: 1px solid rgba(226, 172, 85, 0.45);
+  color: #f1c078;
+  padding: 0.7rem;
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 0.9rem;
+}
+
+.hint {
+  font-family: var(--font-geist-sans), "Geist", sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  opacity: 0.88;
+}
+
+@media (max-width: 960px) {
+  .infoGrid,
+  .downloadGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .container {
+    width: min(1080px, 100% - 1rem);
+    padding-top: 1rem;
+  }
+
+  .topBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topLinks {
+    width: 100%;
+  }
+
+  .topLinks a,
+  .topLinks button,
+  .button,
+  .buttonGhost {
+    width: 100%;
+  }
+}

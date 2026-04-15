@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizeMathContent,
+  normalizeMathEditorDisplay,
   validateMathContent,
 } from "../../apps/mathend/app/lib/math-content";
 
@@ -39,5 +40,21 @@ describe("math content normalization", () => {
 
     expect(validation.fixedContent).toContain("F = frac(dp, dt)");
     expect(validation.issues.length).toBeGreaterThan(0);
+  });
+
+  it("renders simple caret exponents as superscript characters", () => {
+    const input = "r^2 + t^10 + x^n + y^AB";
+
+    expect(normalizeMathContent(input, { target: "typst" })).toBe(
+      "r² + t¹⁰ + xⁿ + yᴬᴮ",
+    );
+    expect(normalizeMathEditorDisplay(input)).toBe("r² + t¹⁰ + xⁿ + yᴬᴮ");
+  });
+
+  it("keeps unsupported exponent tokens with caret syntax", () => {
+    const input = "f^q + g^C";
+
+    expect(normalizeMathContent(input, { target: "typst" })).toBe("f^q + g^C");
+    expect(normalizeMathEditorDisplay(input)).toBe("f^q + g^C");
   });
 });
