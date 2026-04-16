@@ -107,35 +107,32 @@ export default function Home() {
         <main className={styles.main}>
           <section className={styles.hero} id="product">
             <div className={styles.heroContent}>
-              <p className={styles.kicker}>math writing platform</p>
-              <h1 className={styles.title}>
-                A clear workspace for formulas, notes, and publish-ready output.
-              </h1>
+              <p className={styles.kicker}>math writing notes</p>
+              <h1 className={styles.title}></h1>
               <p className={styles.description}>
-                Mathend helps you write faster, format cleaner, and ship
-                math-heavy documents without wrestling with your tools.
+                Stop wrestling with LaTeX and broken layouts. Mathend turns raw
+                notes into polished documents, instantly.
               </p>
               <div className={styles.actions}>
                 <a className={styles.primary} href="/download">
-                  unlock download
+                  Get Started
                 </a>
                 <a className={styles.secondary} href="#pricing">
-                  see pricing
+                  See Pricing
                 </a>
               </div>
 
               <div className={styles.metrics}>
                 <p>
-                  <strong>12k+</strong> active writers
+                  <strong> 0,...ms </strong> rendering latency
                 </p>
                 <p>
-                  <strong>4.9/5</strong> average rating
+                  <strong>1-click</strong> professional export
                 </p>
                 <p>
                   <strong>3x faster</strong> drafting flow
                 </p>
               </div>
-            </div>
 
             <figure className={styles.heroVisual}>
               <div className={styles.imageFrame}>
