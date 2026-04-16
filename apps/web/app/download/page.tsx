@@ -282,11 +282,11 @@ export default function DownloadPage() {
             >
               {isLicensed ? "Licensed" : "Unlicensed"}
             </span>
-            <span className={styles.statusPill}>
+            {/*<span className={styles.statusPill}>
               {licenseStatus?.configured === false
                 ? "License API not configured"
                 : "License API ready"}
-            </span>
+            </span>*/}
             {isCatalogLoading && (
               <span className={styles.statusPill}>
                 Generating secure links...
