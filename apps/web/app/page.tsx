@@ -107,45 +107,19 @@ export default function Home() {
         <main className={styles.main}>
           <section className={styles.hero} id="product">
             <div className={styles.heroContent}>
-              <p className={styles.kicker}>math writing notes</p>
-              <h1 className={styles.title}></h1>
-              <p className={styles.description}>
-                Stop wrestling with LaTeX and broken layouts. Mathend turns raw
-                notes into polished documents, instantly.
-              </p>
-              <div className={styles.actions}>
-                <a className={styles.primary} href="/download">
-                  Get Started
-                </a>
-                <a className={styles.secondary} href="#pricing">
-                  See Pricing
-                </a>
-              </div>
-
-              <div className={styles.metrics}>
-                <p>
-                  <strong> 0,...ms </strong> rendering latency
-                </p>
-                <p>
-                  <strong>1-click</strong> professional export
-                </p>
-                <p>
-                  <strong>3x faster</strong> drafting flow
-                </p>
-              </div>
-
-            <figure className={styles.heroVisual}>
-              <div className={styles.imageFrame}>
-                <Image
-                  className={styles.heroImage}
-                  src="/dummy-workspace.jpg"
-                  alt="Desk with notebook and keyboard"
-                  width={1600}
-                  height={1200}
-                  priority
-                />
-              </div>
-            </figure>
+              <figure className={styles.heroVisual}>
+                <div className={styles.imageFrame}>
+                  <Image
+                    className={styles.heroImage}
+                    src="/dummy-workspace.jpg"
+                    alt="Desk with notebook and keyboard"
+                    width={1600}
+                    height={1200}
+                    priority
+                  />
+                </div>
+              </figure>
+            </div>
           </section>
 
           <section className={styles.section}>
