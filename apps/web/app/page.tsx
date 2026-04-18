@@ -109,13 +109,14 @@ export default function Home() {
             <div className={styles.heroContent}>
               <figure className={styles.heroVisual}>
                 <div className={styles.imageFrame}>
-                  <Image
+                  <video
                     className={styles.heroImage}
-                    src="/dummy-workspace.jpg"
-                    alt="Desk with notebook and keyboard"
-                    width={1600}
-                    height={1200}
-                    priority
+                    src="/my-video.mp4"
+                    poster="/dummy-workspace.jpg"
+                    controls
+                    loop
+                    muted
+                    playsInline
                   />
                 </div>
               </figure>

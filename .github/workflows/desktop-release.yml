@@ -386,6 +386,8 @@ jobs:
     needs:
       - prepare
       - publish
+    env:
+      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
     steps:
       - name: Validate Vercel secrets
         shell: bash
@@ -450,10 +452,8 @@ jobs:
           upsert_env "WEB_DOWNLOAD_LINUX_FILENAME" "$WEB_DOWNLOAD_LINUX_FILENAME"
 
       - name: Trigger Vercel deploy hook
-        if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
+        if: ${{ env.VERCEL_DEPLOY_HOOK_URL != '' }}
         shell: bash
-        env:
-          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: |
           set -euo pipefail
           curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL" >/dev/null
