@@ -5,8 +5,8 @@ import react from "@vitejs/plugin-react";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(testDir, "..");
-const rootReactDir = resolve(repoRoot, "node_modules/react");
-const rootReactDomDir = resolve(repoRoot, "node_modules/react-dom");
+const testReactDir = resolve(testDir, "node_modules/react");
+const testReactDomDir = resolve(testDir, "node_modules/react-dom");
 
 export default defineConfig({
   plugins: [react()],
@@ -15,27 +15,31 @@ export default defineConfig({
     alias: [
       {
         find: /^react$/,
-        replacement: resolve(rootReactDir, "index.js"),
+        replacement: resolve(testReactDir, "index.js"),
       },
       {
         find: /^react-dom$/,
-        replacement: resolve(rootReactDomDir, "index.js"),
+        replacement: resolve(testReactDomDir, "index.js"),
       },
       {
         find: /^react\/jsx-runtime$/,
-        replacement: resolve(rootReactDir, "jsx-runtime.js"),
+        replacement: resolve(testReactDir, "jsx-runtime.js"),
       },
       {
         find: /^react\/jsx-dev-runtime$/,
-        replacement: resolve(rootReactDir, "jsx-dev-runtime.js"),
+        replacement: resolve(testReactDir, "jsx-dev-runtime.js"),
       },
       {
         find: /^react\/(.*)$/,
-        replacement: `${rootReactDir}/$1`,
+        replacement: `${testReactDir}/$1`,
       },
       {
         find: /^react-dom\/(.*)$/,
-        replacement: `${rootReactDomDir}/$1`,
+        replacement: `${testReactDomDir}/$1`,
+      },
+      {
+        find: /^lucide-react$/,
+        replacement: resolve(testDir, "mocks/lucide-react.tsx"),
       },
       {
         find: /^@repo\/ui\/(.*)$/,

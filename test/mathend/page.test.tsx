@@ -1,30 +1,73 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "../../apps/mathend/app/page";
 
-describe("mathend home page", () => {
-  it("renders initial note content", () => {
-    render(<Home />);
+const buildLicensedStatusResponse = () => {
+  return {
+    configured: true,
+    licensed: true,
+    checkoutUrl: "https://muhamsyad.gumroad.com/l/mathend",
+    productId: "mathend",
+    buyerEmail: "tester@example.com",
+    licenseKeyPreview: "ABCD...WXYZ",
+    activatedAt: "2026-04-01T00:00:00.000Z",
+    lastVerifiedAt: "2026-04-01T00:00:00.000Z",
+  };
+};
 
-    expect(screen.getByText("Buku Catatan")).toBeInTheDocument();
+beforeEach(() => {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    const pathname = new URL(url, "http://localhost").pathname;
+
+    if (pathname === "/api/license/status") {
+      return new Response(JSON.stringify(buildLicensedStatusResponse()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (pathname === "/api/license/activate") {
+      return new Response(JSON.stringify(buildLicensedStatusResponse()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    throw new Error(`Unhandled fetch request in test: ${pathname}`);
+  });
+});
+
+describe("mathend home page", () => {
+  it("renders initial note content", async () => {
+    render(<Home />);
+    const textarea = await screen.findByPlaceholderText(
+      /start writing your note/i,
+    );
+
     expect(
-      screen.getByRole("button", { name: "Calculus Notes" }),
+      screen.getByRole("button", { name: /calculus-notes\.md/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByDisplayValue(/The derivative of a function measures/i),
-    ).toBeInTheDocument();
+    expect((textarea as HTMLTextAreaElement).value).toContain(
+      "The derivative of a function measures",
+    );
   });
 
   it("creates a new note and allows editing body", async () => {
     const user = userEvent.setup();
     render(<Home />);
 
-    await user.click(screen.getByRole("button", { name: /new note/i }));
+    await user.click(await screen.findByRole("button", { name: /new file/i }));
 
-    const textarea = screen.getByRole("textbox", {
-      name: "",
-    }) as HTMLTextAreaElement;
+    const textarea = screen.getByPlaceholderText(
+      /start writing your note/i,
+    ) as HTMLTextAreaElement;
 
     fireEvent.change(textarea, {
       target: {
@@ -34,23 +77,24 @@ describe("mathend home page", () => {
       },
     });
 
-    expect(textarea).toBe("Integral practice set");
+    expect(textarea).toHaveValue("Integral practice set");
   });
 
-  it("filters notes by search query", async () => {
+  it("switches notes when selecting a file", async () => {
     const user = userEvent.setup();
     render(<Home />);
 
-    const search = screen.getByRole("textbox", { name: /search notes/i });
-    await user.type(search, "zzz-not-found");
+    await screen.findByRole("button", { name: /new file/i });
+    await user.click(screen.getByRole("button", { name: /linear-algebra\.md/i }));
 
     expect(
-      screen.getByText(/No notes match your current search\/filter/i),
+      screen.getByDisplayValue(/A matrix can represent scaling/i),
     ).toBeInTheDocument();
   });
 
   it("applies slash command from command palette", async () => {
     render(<Home />);
+    await screen.findByRole("button", { name: /new file/i });
 
     const textarea = screen.getByDisplayValue(
       /The derivative of a function measures/i,
@@ -69,7 +113,7 @@ describe("mathend home page", () => {
     fireEvent.keyDown(textarea, { key: "Enter" });
 
     await waitFor(() => {
-      expect(textarea).toBe("calc √() ");
+      expect(textarea).toHaveValue("calc sqrt(x)");
     });
   });
 });
