@@ -6,7 +6,7 @@ import {
   parseDownloadPlatform,
   parseDownloadToken,
 } from "../../../lib/download-runtime";
-import { getGumroadRuntimeConfig } from "../../../lib/gumroad-license";
+import { getLemonSqueezyRuntimeConfig } from "../../../lib/lemonsqueezy-license";
 import {
   getLicenseSessionSecret,
   parseSignedLicenseSession,
@@ -72,13 +72,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const gumroadRuntime = getGumroadRuntimeConfig();
-  if (!gumroadRuntime.enabled) {
+  const runtime = getLemonSqueezyRuntimeConfig();
+  if (!runtime.enabled) {
     return setPrivateNoStore(
       jsonError(
         500,
         "missing_product_id",
-        "Download gate is not configured. Missing GUMROAD_PRODUCT_ID.",
+        "Download gate is not configured. Missing LEMONSQUEEZY_PRODUCT_ID.",
       ),
     );
   }
@@ -152,7 +152,7 @@ export async function GET(request: Request) {
     );
   }
 
-  if (licenseSession.productId !== gumroadRuntime.productId) {
+  if (licenseSession.productId !== runtime.productId) {
     return setPrivateNoStore(
       jsonError(
         401,

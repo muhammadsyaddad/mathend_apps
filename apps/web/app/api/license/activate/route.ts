@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import {
-  getGumroadRuntimeConfig,
-  verifyGumroadLicense,
-} from "../../../lib/gumroad-license";
+  getLemonSqueezyRuntimeConfig,
+  verifyLemonSqueezyLicense,
+} from "../../../lib/lemonsqueezy-license";
 import {
   getLicenseSessionSecret,
   signLicenseSession,
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       {
         configured: false,
         licensed: false,
-        checkoutUrl: "https://muhamsyad.gumroad.com/l/mathend",
+        checkoutUrl: "https://lemonsqueezy.com",
         reason: "invalid_payload",
         error: "Invalid request payload.",
       },
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const runtime = getGumroadRuntimeConfig();
+  const runtime = getLemonSqueezyRuntimeConfig();
   if (!runtime.enabled) {
     return NextResponse.json<LicenseStatusResponse>(
       {
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         checkoutUrl: runtime.checkoutUrl,
         reason: "missing_product_id",
         error:
-          "Gumroad product is not configured. Set GUMROAD_PRODUCT_ID on the server.",
+          "Lemon Squeezy product is not configured. Set LEMONSQUEEZY_PRODUCT_ID on the server.",
       },
       { status: 500 },
     );
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const verification = await verifyGumroadLicense({
+  const verification = await verifyLemonSqueezyLicense({
     productId: runtime.productId,
     apiBase: runtime.apiBase,
     licenseKey,
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
         reverifyDays: runtime.reverifyDays,
         reason: "email_mismatch",
         error:
-          "Purchase email does not match this license key. Use the same email from your Gumroad receipt.",
+          "Purchase email does not match this license key. Use the same email from your Lemon Squeezy receipt.",
       },
       { status: 401 },
     );

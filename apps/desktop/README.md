@@ -11,7 +11,7 @@ Desktop app for Mathend with local-first storage.
 
 ## Desktop License Activation
 
-Desktop app now requires Gumroad activation before opening the workspace.
+Desktop app now requires Lemon Squeezy activation before opening the workspace.
 
 1. Copy env template and fill values:
 
@@ -22,14 +22,14 @@ cp apps/desktop/.env.example apps/desktop/.env
 2. Set at least:
 
 ```bash
-VITE_GUMROAD_PRODUCT_ID=
+VITE_LEMONSQUEEZY_PRODUCT_ID=
 ```
 
 Optional:
 
 ```bash
-VITE_GUMROAD_API_BASE=https://api.gumroad.com
-VITE_GUMROAD_CHECKOUT_URL=https://muhamsyad.gumroad.com/l/mathend
+VITE_LEMONSQUEEZY_API_BASE=https://api.lemonsqueezy.com
+VITE_LEMONSQUEEZY_CHECKOUT_URL=https://lemonsqueezy.com
 VITE_LICENSE_REVERIFY_DAYS=7
 ```
 

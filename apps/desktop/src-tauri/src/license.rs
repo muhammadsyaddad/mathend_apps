@@ -1,9 +1,10 @@
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VerifyGumroadLicenseParams {
+pub struct VerifyLemonSqueezyLicenseParams {
   pub product_id: String,
   pub api_base: String,
   pub license_key: String,
@@ -12,7 +13,7 @@ pub struct VerifyGumroadLicenseParams {
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
-pub struct GumroadPurchase {
+pub struct LemonSqueezyPurchase {
   pub email: Option<String>,
   pub sale_id: Option<String>,
   pub id: Option<String>,
@@ -21,7 +22,7 @@ pub struct GumroadPurchase {
   pub chargebacked: Option<bool>,
 }
 
-impl Default for GumroadPurchase {
+impl Default for LemonSqueezyPurchase {
   fn default() -> Self {
     Self {
       email: None,
@@ -34,42 +35,46 @@ impl Default for GumroadPurchase {
   }
 }
 
-#[derive(Deserialize)]
-#[serde(default)]
-struct GumroadLicenseVerifyResponse {
-  success: Option<bool>,
-  purchase: Option<GumroadPurchase>,
-  message: Option<String>,
+#[derive(Deserialize, Default)]
+struct LemonSqueezyLicenseKey {
+  id: Option<Value>,
+  status: Option<String>,
 }
 
-impl Default for GumroadLicenseVerifyResponse {
-  fn default() -> Self {
-    Self {
-      success: None,
-      purchase: None,
-      message: None,
-    }
-  }
+#[derive(Deserialize, Default)]
+struct LemonSqueezyLicenseMeta {
+  product_id: Option<Value>,
+  order_id: Option<Value>,
+  order_item_id: Option<Value>,
+  customer_email: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+struct LemonSqueezyLicenseValidateResponse {
+  valid: Option<bool>,
+  error: Option<String>,
+  license_key: Option<LemonSqueezyLicenseKey>,
+  meta: Option<LemonSqueezyLicenseMeta>,
 }
 
 #[derive(Serialize)]
 #[serde(untagged)]
-pub enum VerifyGumroadLicenseResult {
-  Success(VerifyGumroadLicenseSuccess),
-  Failure(VerifyGumroadLicenseFailure),
+pub enum VerifyLemonSqueezyLicenseResult {
+  Success(VerifyLemonSqueezyLicenseSuccess),
+  Failure(VerifyLemonSqueezyLicenseFailure),
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VerifyGumroadLicenseSuccess {
+pub struct VerifyLemonSqueezyLicenseSuccess {
   pub ok: bool,
-  pub purchase: GumroadPurchase,
+  pub purchase: LemonSqueezyPurchase,
   pub sale_id: String,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VerifyGumroadLicenseFailure {
+pub struct VerifyLemonSqueezyLicenseFailure {
   pub ok: bool,
   pub reason: String,
   pub message: String,
@@ -79,7 +84,7 @@ pub struct VerifyGumroadLicenseFailure {
 fn normalize_api_base(value: &str) -> String {
   let trimmed = value.trim();
   if trimmed.is_empty() {
-    return "https://api.gumroad.com".to_string();
+    return "https://api.lemonsqueezy.com".to_string();
   }
 
   if trimmed.ends_with('/') {
@@ -89,18 +94,38 @@ fn normalize_api_base(value: &str) -> String {
   trimmed.to_string()
 }
 
-fn resolve_sale_id(purchase: &GumroadPurchase) -> String {
-  if let Some(sale_id) = &purchase.sale_id {
-    let sale_id = sale_id.trim();
-    if !sale_id.is_empty() {
-      return sale_id.to_string();
+fn normalize_license_status(value: Option<&str>) -> String {
+  value.unwrap_or("").trim().to_lowercase()
+}
+
+fn to_id_string(value: Option<&Value>) -> String {
+  match value {
+    Some(Value::String(value)) => value.trim().to_string(),
+    Some(Value::Number(value)) => value.to_string(),
+    _ => "".to_string(),
+  }
+}
+
+fn resolve_sale_id(
+  meta: Option<&LemonSqueezyLicenseMeta>,
+  license_key: Option<&LemonSqueezyLicenseKey>,
+) -> String {
+  if let Some(meta) = meta {
+    let order_item_id = to_id_string(meta.order_item_id.as_ref());
+    if !order_item_id.is_empty() {
+      return order_item_id;
+    }
+
+    let order_id = to_id_string(meta.order_id.as_ref());
+    if !order_id.is_empty() {
+      return order_id;
     }
   }
 
-  if let Some(id) = &purchase.id {
-    let id = id.trim();
-    if !id.is_empty() {
-      return id.to_string();
+  if let Some(license_key) = license_key {
+    let license_key_id = to_id_string(license_key.id.as_ref());
+    if !license_key_id.is_empty() {
+      return license_key_id;
     }
   }
 
@@ -108,19 +133,19 @@ fn resolve_sale_id(purchase: &GumroadPurchase) -> String {
 }
 
 #[tauri::command]
-pub async fn verify_gumroad_license(
-  params: VerifyGumroadLicenseParams,
-) -> Result<VerifyGumroadLicenseResult, String> {
+pub async fn verify_lemonsqueezy_license(
+  params: VerifyLemonSqueezyLicenseParams,
+) -> Result<VerifyLemonSqueezyLicenseResult, String> {
   let product_id = params.product_id.trim().to_string();
   let license_key = params.license_key.trim().to_string();
   let api_base = normalize_api_base(&params.api_base);
 
   if product_id.is_empty() {
     return Ok(
-      VerifyGumroadLicenseFailure {
+      VerifyLemonSqueezyLicenseFailure {
         ok: false,
         reason: "invalid".to_string(),
-        message: "Gumroad product id is missing.".to_string(),
+        message: "Lemon Squeezy product id is missing.".to_string(),
         status: Some(400),
       }
       .into(),
@@ -129,7 +154,7 @@ pub async fn verify_gumroad_license(
 
   if license_key.is_empty() {
     return Ok(
-      VerifyGumroadLicenseFailure {
+      VerifyLemonSqueezyLicenseFailure {
         ok: false,
         reason: "invalid".to_string(),
         message: "License key is required.".to_string(),
@@ -139,21 +164,8 @@ pub async fn verify_gumroad_license(
     );
   }
 
-  let endpoint = format!("{}/v2/licenses/verify", api_base);
-  let increment_uses_count = params.increment_uses_count.unwrap_or(false);
-
-  let body = vec![
-    ("product_id", product_id),
-    ("license_key", license_key),
-    (
-      "increment_uses_count",
-      if increment_uses_count {
-        "true".to_string()
-      } else {
-        "false".to_string()
-      },
-    ),
-  ];
+  let endpoint = format!("{}/v1/licenses/validate", api_base);
+  let body = vec![("license_key", license_key)];
 
   let client = reqwest::Client::new();
   let response = match client
@@ -166,10 +178,10 @@ pub async fn verify_gumroad_license(
     Ok(response) => response,
     Err(_) => {
       return Ok(
-        VerifyGumroadLicenseFailure {
+        VerifyLemonSqueezyLicenseFailure {
           ok: false,
           reason: "network".to_string(),
-          message: "Could not reach Gumroad license API.".to_string(),
+          message: "Could not reach Lemon Squeezy license API.".to_string(),
           status: None,
         }
         .into(),
@@ -179,17 +191,17 @@ pub async fn verify_gumroad_license(
 
   let status = response.status().as_u16();
   let payload = response
-    .json::<GumroadLicenseVerifyResponse>()
+    .json::<LemonSqueezyLicenseValidateResponse>()
     .await
     .unwrap_or_default();
 
-  if status >= 400 || payload.success != Some(true) || payload.purchase.is_none() {
+  if status >= 400 || payload.valid != Some(true) || payload.license_key.is_none() {
     return Ok(
-      VerifyGumroadLicenseFailure {
+      VerifyLemonSqueezyLicenseFailure {
         ok: false,
         reason: "invalid".to_string(),
         message: payload
-          .message
+          .error
           .unwrap_or_else(|| "License key is invalid for this product.".to_string()),
         status: Some(status),
       }
@@ -197,38 +209,99 @@ pub async fn verify_gumroad_license(
     );
   }
 
-  let purchase = payload.purchase.unwrap_or_default();
-  if purchase.refunded.unwrap_or(false)
-    || purchase.disputed.unwrap_or(false)
-    || purchase.chargebacked.unwrap_or(false)
-  {
+  let license_status = normalize_license_status(
+    payload
+      .license_key
+      .as_ref()
+      .and_then(|license_key| license_key.status.as_deref()),
+  );
+
+  if license_status == "disabled" || license_status == "expired" {
     return Ok(
-      VerifyGumroadLicenseFailure {
+      VerifyLemonSqueezyLicenseFailure {
         ok: false,
         reason: "revoked".to_string(),
         message:
-          "License access is unavailable because purchase is refunded or disputed.".to_string(),
+          "License access is unavailable because this Lemon Squeezy license is disabled or expired."
+            .to_string(),
         status: Some(status),
       }
       .into(),
     );
   }
 
-  let sale_id = resolve_sale_id(&purchase);
-  if sale_id.is_empty() {
+  let verified_product_id = to_id_string(
+    payload
+      .meta
+      .as_ref()
+      .and_then(|meta| meta.product_id.as_ref()),
+  );
+
+  if verified_product_id.is_empty() {
     return Ok(
-      VerifyGumroadLicenseFailure {
+      VerifyLemonSqueezyLicenseFailure {
         ok: false,
         reason: "invalid".to_string(),
-        message: "Gumroad verification did not include a valid sale id.".to_string(),
+        message: "Lemon Squeezy validation did not include a product id.".to_string(),
         status: Some(status),
       }
       .into(),
     );
   }
 
+  if verified_product_id != product_id {
+    return Ok(
+      VerifyLemonSqueezyLicenseFailure {
+        ok: false,
+        reason: "invalid".to_string(),
+        message: "License key is invalid for this product.".to_string(),
+        status: Some(status),
+      }
+      .into(),
+    );
+  }
+
+  let sale_id = resolve_sale_id(payload.meta.as_ref(), payload.license_key.as_ref());
+  if sale_id.is_empty() {
+    return Ok(
+      VerifyLemonSqueezyLicenseFailure {
+        ok: false,
+        reason: "invalid".to_string(),
+        message:
+          "Lemon Squeezy validation did not include a stable order identifier.".to_string(),
+        status: Some(status),
+      }
+      .into(),
+    );
+  }
+
+  let purchase = LemonSqueezyPurchase {
+    email: payload
+      .meta
+      .as_ref()
+      .and_then(|meta| meta.customer_email.as_ref())
+      .map(|value| value.trim().to_lowercase())
+      .filter(|value| !value.is_empty()),
+    sale_id: Some(sale_id.clone()),
+    id: payload
+      .license_key
+      .as_ref()
+      .and_then(|license_key| license_key.id.as_ref())
+      .and_then(|value| {
+        let id = to_id_string(Some(value));
+        if id.is_empty() {
+          None
+        } else {
+          Some(id)
+        }
+      }),
+    refunded: None,
+    disputed: None,
+    chargebacked: None,
+  };
+
   Ok(
-    VerifyGumroadLicenseSuccess {
+    VerifyLemonSqueezyLicenseSuccess {
       ok: true,
       purchase,
       sale_id,
@@ -237,14 +310,14 @@ pub async fn verify_gumroad_license(
   )
 }
 
-impl From<VerifyGumroadLicenseSuccess> for VerifyGumroadLicenseResult {
-  fn from(value: VerifyGumroadLicenseSuccess) -> Self {
-    VerifyGumroadLicenseResult::Success(value)
+impl From<VerifyLemonSqueezyLicenseSuccess> for VerifyLemonSqueezyLicenseResult {
+  fn from(value: VerifyLemonSqueezyLicenseSuccess) -> Self {
+    VerifyLemonSqueezyLicenseResult::Success(value)
   }
 }
 
-impl From<VerifyGumroadLicenseFailure> for VerifyGumroadLicenseResult {
-  fn from(value: VerifyGumroadLicenseFailure) -> Self {
-    VerifyGumroadLicenseResult::Failure(value)
+impl From<VerifyLemonSqueezyLicenseFailure> for VerifyLemonSqueezyLicenseResult {
+  fn from(value: VerifyLemonSqueezyLicenseFailure) -> Self {
+    VerifyLemonSqueezyLicenseResult::Failure(value)
   }
 }

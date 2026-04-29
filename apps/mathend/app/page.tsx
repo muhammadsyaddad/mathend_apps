@@ -267,7 +267,7 @@ export default function Home() {
       setLicenseStatus({
         configured: false,
         licensed: false,
-        checkoutUrl: "https://muhamsyad.gumroad.com/l/mathend",
+        checkoutUrl: "https://lemonsqueezy.com",
         reason: "network",
         error: "Failed to check license status. Please retry.",
       });

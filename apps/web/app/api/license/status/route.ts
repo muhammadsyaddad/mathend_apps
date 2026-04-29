@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  getGumroadRuntimeConfig,
-  verifyGumroadLicense,
-} from "../../../lib/gumroad-license";
+  getLemonSqueezyRuntimeConfig,
+  verifyLemonSqueezyLicense,
+} from "../../../lib/lemonsqueezy-license";
 import {
   getLicenseSessionSecret,
   parseSignedLicenseSession,
@@ -30,7 +30,7 @@ const clearLicenseCookie = (response: NextResponse): void => {
 
 const buildLicensedResponse = (
   payload: LicenseSessionPayload,
-  runtime: ReturnType<typeof getGumroadRuntimeConfig>,
+  runtime: ReturnType<typeof getLemonSqueezyRuntimeConfig>,
 ): LicenseStatusResponse => {
   return {
     configured: true,
@@ -46,7 +46,7 @@ const buildLicensedResponse = (
 };
 
 export async function GET(request: Request) {
-  const runtime = getGumroadRuntimeConfig();
+  const runtime = getLemonSqueezyRuntimeConfig();
   if (!runtime.enabled) {
     return NextResponse.json<LicenseStatusResponse>({
       configured: false,
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       checkoutUrl: runtime.checkoutUrl,
       reason: "missing_product_id",
       error:
-        "Gumroad product is not configured. Set GUMROAD_PRODUCT_ID on the server.",
+        "Lemon Squeezy product is not configured. Set LEMONSQUEEZY_PRODUCT_ID on the server.",
     });
   }
 
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const verification = await verifyGumroadLicense({
+  const verification = await verifyLemonSqueezyLicense({
     productId: runtime.productId,
     apiBase: runtime.apiBase,
     licenseKey: session.licenseKey,
@@ -107,7 +107,7 @@ export async function GET(request: Request) {
         ...buildLicensedResponse(session, runtime),
         reason: "network_reverify_failed",
         error:
-          "Using cached license status because Gumroad verification is temporarily unavailable.",
+          "Using cached license status because Lemon Squeezy verification is temporarily unavailable.",
       });
     }
 

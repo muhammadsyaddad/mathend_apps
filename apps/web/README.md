@@ -31,7 +31,7 @@ cp apps/web/.env.example apps/web/.env.local
 2. Fill required values:
 
 ```bash
-GUMROAD_PRODUCT_ID=
+LEMONSQUEEZY_PRODUCT_ID=
 LICENSE_COOKIE_SECRET=
 WEB_DOWNLOAD_WINDOWS_URL=
 WEB_DOWNLOAD_MACOS_URL=
@@ -41,8 +41,8 @@ WEB_DOWNLOAD_LINUX_URL=
 Optional values:
 
 ```bash
-GUMROAD_API_BASE=https://api.gumroad.com
-GUMROAD_CHECKOUT_URL=https://muhamsyad.gumroad.com/l/mathend
+LEMONSQUEEZY_API_BASE=https://api.lemonsqueezy.com
+LEMONSQUEEZY_CHECKOUT_URL=https://lemonsqueezy.com
 LICENSE_REVERIFY_DAYS=7
 WEB_DOWNLOAD_TOKEN_SECRET=
 WEB_DOWNLOAD_TOKEN_TTL_SECONDS=300
@@ -55,7 +55,7 @@ WEB_DOWNLOAD_UPSTREAM_BEARER_TOKEN=
 ## Strict Download Flow
 
 1. Buyer opens `/download`
-2. Buyer activates Gumroad license (`POST /api/license/activate`)
+2. Buyer activates Lemon Squeezy license (`POST /api/license/activate`)
 3. Frontend asks catalog (`GET /api/download/catalog`)
 4. API returns short-lived, signed links per platform
 5. Buyer downloads via `GET /api/download/file?platform=...&token=...`

@@ -62,12 +62,12 @@ Owner: repo maintainers
 - Mathend currently persists note/session state in browser storage.
 - Desktop persists note/session state through local SQLite (`src/lib/note-db.ts`).
 
-### 4) Gumroad License Flow (`apps/mathend`)
+### 4) Lemon Squeezy License Flow (`apps/mathend`)
 
 - Entry: `POST /api/license/activate`
 - Status check: `GET /api/license/status`
 - Session clear: `POST /api/license/deactivate`
-- Runtime config: `app/lib/gumroad-license.ts`
+- Runtime config: `app/lib/lemonsqueezy-license.ts`
 - Signed cookie helpers: `app/lib/license-session.ts`
 - Session payload type: `app/lib/license-types.ts`
 - UI gate before workspace: `app/components/license-gate.tsx`

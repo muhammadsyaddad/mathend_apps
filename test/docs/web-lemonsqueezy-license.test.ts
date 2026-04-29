@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  getGumroadRuntimeConfig,
-  verifyGumroadLicense,
-} from "../../apps/web/app/lib/gumroad-license";
+  getLemonSqueezyRuntimeConfig,
+  verifyLemonSqueezyLicense,
+} from "../../apps/web/app/lib/lemonsqueezy-license";
 
 const ENV_KEYS = [
-  "GUMROAD_PRODUCT_ID",
-  "GUMROAD_API_BASE",
-  "GUMROAD_CHECKOUT_URL",
+  "LEMONSQUEEZY_PRODUCT_ID",
+  "LEMONSQUEEZY_API_BASE",
+  "LEMONSQUEEZY_CHECKOUT_URL",
   "LICENSE_REVERIFY_DAYS",
 ] as const;
 
@@ -26,7 +26,7 @@ const resetEnv = () => {
   }
 };
 
-describe("web gumroad runtime", () => {
+describe("web lemonsqueezy runtime", () => {
   afterEach(() => {
     resetEnv();
     vi.restoreAllMocks();
@@ -37,11 +37,11 @@ describe("web gumroad runtime", () => {
       delete process.env[key];
     }
 
-    const config = getGumroadRuntimeConfig();
+    const config = getLemonSqueezyRuntimeConfig();
 
     expect(config.enabled).toBe(false);
-    expect(config.apiBase).toBe("https://api.gumroad.com");
-    expect(config.checkoutUrl).toBe("https://muhamsyad.gumroad.com/l/mathend");
+    expect(config.apiBase).toBe("https://api.lemonsqueezy.com");
+    expect(config.checkoutUrl).toBe("https://lemonsqueezy.com");
     expect(config.reverifyDays).toBe(7);
   });
 
@@ -51,10 +51,16 @@ describe("web gumroad runtime", () => {
       vi.fn(async () => {
         return new Response(
           JSON.stringify({
-            success: true,
-            purchase: {
-              email: "buyer@example.com",
-              sale_id: "sale_123",
+            valid: true,
+            error: null,
+            license_key: {
+              id: 10,
+              status: "active",
+            },
+            meta: {
+              product_id: "product_1",
+              order_item_id: "sale_123",
+              customer_email: "buyer@example.com",
             },
           }),
           {
@@ -65,9 +71,9 @@ describe("web gumroad runtime", () => {
       }),
     );
 
-    const result = await verifyGumroadLicense({
+    const result = await verifyLemonSqueezyLicense({
       productId: "product_1",
-      apiBase: "https://api.gumroad.com",
+      apiBase: "https://api.lemonsqueezy.com",
       licenseKey: "ABCD-EFGH-IJKL-MNOP",
     });
 
@@ -83,10 +89,14 @@ describe("web gumroad runtime", () => {
       vi.fn(async () => {
         return new Response(
           JSON.stringify({
-            success: true,
-            purchase: {
-              sale_id: "sale_123",
-              refunded: true,
+            valid: true,
+            error: null,
+            license_key: {
+              id: 10,
+              status: "expired",
+            },
+            meta: {
+              product_id: "product_1",
             },
           }),
           {
@@ -97,9 +107,9 @@ describe("web gumroad runtime", () => {
       }),
     );
 
-    const result = await verifyGumroadLicense({
+    const result = await verifyLemonSqueezyLicense({
       productId: "product_1",
-      apiBase: "https://api.gumroad.com",
+      apiBase: "https://api.lemonsqueezy.com",
       licenseKey: "ABCD-EFGH-IJKL-MNOP",
     });
 

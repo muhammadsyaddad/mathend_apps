@@ -37,7 +37,7 @@ type DownloadCatalogResponse = {
 
 type LicenseStateResponse = LicenseStatusResponse;
 
-const FALLBACK_CHECKOUT_URL = "https://muhamsyad.gumroad.com/l/mathend";
+const FALLBACK_CHECKOUT_URL = "https://lemonsqueezy.com";
 
 const toLicenseStatus = (
   payload: LicenseStateResponse | DownloadCatalogResponse,
@@ -267,7 +267,7 @@ export default function DownloadPage() {
             Download Mathend Desktop with license-gated access.
           </h1>
           <p className={styles.description}>
-            Strict gate is enabled: only valid Gumroad buyers can access
+            Strict gate is enabled: only valid Lemon Squeezy buyers can access
             installer links. After install, the desktop app still asks for
             activation again on first open.
           </p>
@@ -302,7 +302,7 @@ export default function DownloadPage() {
           {!isLicensed && (
             <>
               <p className={styles.copy}>
-                You need a valid Gumroad license before download links are
+                You need a valid Lemon Squeezy license before download links are
                 generated.
               </p>
 

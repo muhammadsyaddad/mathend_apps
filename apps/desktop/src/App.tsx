@@ -20,7 +20,7 @@ import {
   isSessionReverifyDue,
   maskLicenseKey,
   toLicensedStatus,
-  verifyDesktopGumroadLicense,
+  verifyDesktopLemonSqueezyLicense,
 } from "./lib/license-runtime";
 import type {
   LicenseSessionPayload,
@@ -1247,7 +1247,7 @@ export default function Home() {
           configured: false,
           reason: "missing_product_id",
           error:
-            "Desktop license is not configured. Set VITE_GUMROAD_PRODUCT_ID in apps/desktop/.env.",
+            "Desktop license is not configured. Set VITE_LEMONSQUEEZY_PRODUCT_ID in apps/desktop/.env.",
         }),
       );
       setIsLicenseStatusLoading(false);
@@ -1271,7 +1271,7 @@ export default function Home() {
         return;
       }
 
-      const verification = await verifyDesktopGumroadLicense({
+      const verification = await verifyDesktopLemonSqueezyLicense({
         productId: licenseConfig.productId,
         apiBase: licenseConfig.apiBase,
         licenseKey: session.licenseKey,
@@ -1284,7 +1284,7 @@ export default function Home() {
             ...toLicensedStatus(session, licenseConfig),
             reason: "network_reverify_failed",
             error:
-              "Using cached desktop license because Gumroad verification is temporarily unavailable.",
+              "Using cached desktop license because Lemon Squeezy verification is temporarily unavailable.",
           });
           return;
         }
@@ -1330,7 +1330,7 @@ export default function Home() {
 
       if (!licenseConfig.enabled) {
         const error =
-          "Desktop license is not configured. Set VITE_GUMROAD_PRODUCT_ID in apps/desktop/.env.";
+          "Desktop license is not configured. Set VITE_LEMONSQUEEZY_PRODUCT_ID in apps/desktop/.env.";
         setLicenseStatus(
           buildUnlicensedStatus({
             configured: false,
@@ -1357,7 +1357,7 @@ export default function Home() {
       }
 
       try {
-        const verification = await verifyDesktopGumroadLicense({
+        const verification = await verifyDesktopLemonSqueezyLicense({
           productId: licenseConfig.productId,
           apiBase: licenseConfig.apiBase,
           licenseKey,
@@ -1382,7 +1382,7 @@ export default function Home() {
 
         if (emailInput && buyerEmail !== emailInput) {
           const error =
-            "Purchase email does not match this license key. Use the same email from your Gumroad receipt.";
+            "Purchase email does not match this license key. Use the same email from your Lemon Squeezy receipt.";
           setLicenseStatus(
             buildUnlicensedStatus({ reason: "email_mismatch", error }),
           );

@@ -23,8 +23,7 @@ export default function LicenseGate({
   const [licenseKey, setLicenseKey] = useState("");
   const [email, setEmail] = useState("");
   const [hasHydrated, setHasHydrated] = useState(false);
-  const checkoutUrl =
-    status?.checkoutUrl?.trim() || "https://muhamsyad.gumroad.com/l/mathend";
+  const checkoutUrl = status?.checkoutUrl?.trim() || "https://lemonsqueezy.com";
   const controlsDisabled = hasHydrated ? isLoading || isActivating : false;
 
   useEffect(() => {
@@ -37,7 +36,7 @@ export default function LicenseGate({
         <p className="license-gate-kicker">Mathend License</p>
         <h1 className="license-gate-title">Activate your lifetime access</h1>
         <p className="license-gate-copy">
-          Mathend uses Gumroad license verification before opening the
+          Mathend uses Lemon Squeezy license verification before opening the
           workspace.
         </p>
 

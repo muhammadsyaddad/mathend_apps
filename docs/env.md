@@ -28,11 +28,11 @@ Then fill values in `apps/mathend/.env.local`.
 
 ## Variables (`apps/mathend`)
 
-### Gumroad Licensing
+### Lemon Squeezy Licensing
 
-- `GUMROAD_PRODUCT_ID` (required for license verification)
-- `GUMROAD_API_BASE` (optional, default: `https://api.gumroad.com`)
-- `GUMROAD_CHECKOUT_URL` (optional, default: `https://muhamsyad.gumroad.com/l/mathend`)
+- `LEMONSQUEEZY_PRODUCT_ID` (required for license verification)
+- `LEMONSQUEEZY_API_BASE` (optional, default: `https://api.lemonsqueezy.com`)
+- `LEMONSQUEEZY_CHECKOUT_URL` (optional, default: `https://lemonsqueezy.com`)
 - `LICENSE_COOKIE_SECRET` (required, server-only signing key for license session cookie)
 - `LICENSE_REVERIFY_DAYS` (optional, default: `7`)
 
@@ -72,20 +72,20 @@ Default flow now uses OAuth + server-side Copilot token exchange for GitHub Copi
 
 ## Variables (`apps/desktop`)
 
-### Gumroad Licensing (Desktop)
+### Lemon Squeezy Licensing (Desktop)
 
-- `VITE_GUMROAD_PRODUCT_ID` (required for desktop license verification)
-- `VITE_GUMROAD_API_BASE` (optional, default: `https://api.gumroad.com`)
-- `VITE_GUMROAD_CHECKOUT_URL` (optional, default: `https://muhamsyad.gumroad.com/l/mathend`)
+- `VITE_LEMONSQUEEZY_PRODUCT_ID` (required for desktop license verification)
+- `VITE_LEMONSQUEEZY_API_BASE` (optional, default: `https://api.lemonsqueezy.com`)
+- `VITE_LEMONSQUEEZY_CHECKOUT_URL` (optional, default: `https://lemonsqueezy.com`)
 - `VITE_LICENSE_REVERIFY_DAYS` (optional, default: `7`)
 
 ## Variables (`apps/web`)
 
-### Gumroad Licensing (Web download gate)
+### Lemon Squeezy Licensing (Web download gate)
 
-- `GUMROAD_PRODUCT_ID` (required)
-- `GUMROAD_API_BASE` (optional, default: `https://api.gumroad.com`)
-- `GUMROAD_CHECKOUT_URL` (optional, default: `https://muhamsyad.gumroad.com/l/mathend`)
+- `LEMONSQUEEZY_PRODUCT_ID` (required)
+- `LEMONSQUEEZY_API_BASE` (optional, default: `https://api.lemonsqueezy.com`)
+- `LEMONSQUEEZY_CHECKOUT_URL` (optional, default: `https://lemonsqueezy.com`)
 - `LICENSE_COOKIE_SECRET` (required, signing key for web license session cookie)
 - `LICENSE_REVERIFY_DAYS` (optional, default: `7`)
 
@@ -105,9 +105,9 @@ Default flow now uses OAuth + server-side Copilot token exchange for GitHub Copi
 
 Static env (set once, manually managed):
 
-- `GUMROAD_PRODUCT_ID`
-- `GUMROAD_API_BASE`
-- `GUMROAD_CHECKOUT_URL`
+- `LEMONSQUEEZY_PRODUCT_ID`
+- `LEMONSQUEEZY_API_BASE`
+- `LEMONSQUEEZY_CHECKOUT_URL`
 - `LICENSE_COOKIE_SECRET`
 - `LICENSE_REVERIFY_DAYS`
 - `WEB_DOWNLOAD_TOKEN_SECRET`

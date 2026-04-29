@@ -172,9 +172,9 @@ Run workflow manually (`workflow_dispatch`) with version like `0.1.0-rc1`.
 
 - Port conflict (3000/3001/1420): stop previous process or run targeted workspace command.
 - Missing OAuth env: copy `apps/mathend/.env.example` to `apps/mathend/.env.local` and fill values.
-- Missing Gumroad license env: ensure `GUMROAD_PRODUCT_ID` and `LICENSE_COOKIE_SECRET` are set in `apps/mathend/.env.local`.
-- Missing desktop Gumroad env: copy `apps/desktop/.env.example` to `apps/desktop/.env` and set `VITE_GUMROAD_PRODUCT_ID`.
-- Missing web strict-download env: copy `apps/web/.env.example` to `apps/web/.env.local` and set `GUMROAD_PRODUCT_ID`, `LICENSE_COOKIE_SECRET`, and `WEB_DOWNLOAD_<PLATFORM>_URL` values.
+- Missing Lemon Squeezy license env: ensure `LEMONSQUEEZY_PRODUCT_ID` and `LICENSE_COOKIE_SECRET` are set in `apps/mathend/.env.local`.
+- Missing desktop Lemon Squeezy env: copy `apps/desktop/.env.example` to `apps/desktop/.env` and set `VITE_LEMONSQUEEZY_PRODUCT_ID`.
+- Missing web strict-download env: copy `apps/web/.env.example` to `apps/web/.env.local` and set `LEMONSQUEEZY_PRODUCT_ID`, `LICENSE_COOKIE_SECRET`, and `WEB_DOWNLOAD_<PLATFORM>_URL` values.
 - Desktop release upload fails: verify `BINARIES_REPO` and `BINARIES_REPO_TOKEN_WRITE` permissions to private binaries repo releases/assets.
 - Vercel env sync fails: verify `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` secrets and project access.
 - Type errors after dependency updates: run `bun install` then `bun run check-types`.

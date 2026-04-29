@@ -4,9 +4,8 @@ import type {
   LicenseStatusResponse,
 } from "./license-types";
 
-export const DEFAULT_GUMROAD_API_BASE = "https://api.gumroad.com";
-export const DEFAULT_GUMROAD_CHECKOUT_URL =
-  "https://muhamsyad.gumroad.com/l/mathend";
+export const DEFAULT_LEMONSQUEEZY_API_BASE = "https://api.lemonsqueezy.com";
+export const DEFAULT_LEMONSQUEEZY_CHECKOUT_URL = "https://lemonsqueezy.com";
 export const DEFAULT_LICENSE_REVERIFY_DAYS = 7;
 
 export type DesktopLicenseRuntimeConfig = {
@@ -41,19 +40,25 @@ export type VerifyDesktopLicenseResult =
 
 export const getDesktopLicenseRuntimeConfig =
   (): DesktopLicenseRuntimeConfig => {
-    const productId = (import.meta.env.VITE_GUMROAD_PRODUCT_ID ?? "").trim();
+    const productId = (
+      import.meta.env.VITE_LEMONSQUEEZY_PRODUCT_ID ?? ""
+    ).trim();
 
-    const apiBaseRaw = (import.meta.env.VITE_GUMROAD_API_BASE ?? "").trim();
+    const apiBaseRaw = (
+      import.meta.env.VITE_LEMONSQUEEZY_API_BASE ?? ""
+    ).trim();
     const apiBase =
       apiBaseRaw.length > 0
         ? apiBaseRaw.replace(/\/$/, "")
-        : DEFAULT_GUMROAD_API_BASE;
+        : DEFAULT_LEMONSQUEEZY_API_BASE;
 
     const checkoutUrlRaw = (
-      import.meta.env.VITE_GUMROAD_CHECKOUT_URL ?? ""
+      import.meta.env.VITE_LEMONSQUEEZY_CHECKOUT_URL ?? ""
     ).trim();
     const checkoutUrl =
-      checkoutUrlRaw.length > 0 ? checkoutUrlRaw : DEFAULT_GUMROAD_CHECKOUT_URL;
+      checkoutUrlRaw.length > 0
+        ? checkoutUrlRaw
+        : DEFAULT_LEMONSQUEEZY_CHECKOUT_URL;
 
     const reverifyDaysRaw = Number(import.meta.env.VITE_LICENSE_REVERIFY_DAYS);
     const reverifyDays =
@@ -111,11 +116,14 @@ export const toLicensedStatus = (
   };
 };
 
-export const verifyDesktopGumroadLicense = async (params: {
+export const verifyDesktopLemonSqueezyLicense = async (params: {
   productId: string;
   apiBase: string;
   licenseKey: string;
   incrementUsesCount?: boolean;
 }): Promise<VerifyDesktopLicenseResult> => {
-  return invoke<VerifyDesktopLicenseResult>("verify_gumroad_license", params);
+  return invoke<VerifyDesktopLicenseResult>(
+    "verify_lemonsqueezy_license",
+    params,
+  );
 };

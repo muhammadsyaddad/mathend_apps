@@ -73,24 +73,24 @@ Catatan:
 - Untuk Claude Code AI, isi `AUTH_URL` dan `TOKEN_URL` sesuai penyedia OAuth yang kamu gunakan.
 - Chat GitHub Copilot sekarang pakai endpoint Copilot (`api.githubcopilot.com`) dengan token exchange server-side setelah OAuth, jadi user tidak perlu isi PAT per akun.
 
-## Setup Gumroad license (wajib untuk akses workspace)
+## Setup Lemon Squeezy license (wajib untuk akses workspace)
 
-Mathend sekarang menggunakan aktivasi lisensi Gumroad sebelum editor bisa dibuka.
+Mathend sekarang menggunakan aktivasi lisensi Lemon Squeezy sebelum editor bisa dibuka.
 
-1. Buat product Gumroad dan aktifkan license key.
+1. Buat product Lemon Squeezy dan aktifkan license key.
 2. Isi env berikut di `apps/mathend/.env.local`:
 
 ```bash
-GUMROAD_PRODUCT_ID=
-GUMROAD_API_BASE=https://api.gumroad.com
-GUMROAD_CHECKOUT_URL=https://muhamsyad.gumroad.com/l/mathend
+LEMONSQUEEZY_PRODUCT_ID=
+LEMONSQUEEZY_API_BASE=https://api.lemonsqueezy.com
+LEMONSQUEEZY_CHECKOUT_URL=https://lemonsqueezy.com
 LICENSE_COOKIE_SECRET=
 LICENSE_REVERIFY_DAYS=7
 ```
 
 Catatan:
 
-- `GUMROAD_PRODUCT_ID` dan `LICENSE_COOKIE_SECRET` wajib di server.
+- `LEMONSQUEEZY_PRODUCT_ID` dan `LICENSE_COOKIE_SECRET` wajib di server.
 - Jika belum diisi, app akan tetap menampilkan layar aktivasi lisensi.
 
 ## Callback URL
@@ -111,7 +111,7 @@ Daftarkan URL callback ini pada OAuth app provider terkait.
 - `POST /api/oauth/disconnect` -> putuskan koneksi provider
 - `POST /api/agent/chat` -> kirim message ke agent panel (JSON biasa, atau NDJSON stream jika `stream: true`)
 - `GET /api/license/status` -> cek status lisensi browser saat ini
-- `POST /api/license/activate` -> aktivasi lisensi Gumroad
+- `POST /api/license/activate` -> aktivasi lisensi Lemon Squeezy
 - `POST /api/license/deactivate` -> hapus sesi lisensi browser saat ini
 
 ## Verifikasi

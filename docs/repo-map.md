@@ -41,8 +41,8 @@ docs/         # AI-first operating docs
   - `apps/mathend/app/lib/agent-provider-chat-runtime.ts`
   - `apps/mathend/app/lib/agent-chat-live.ts`
   - `apps/mathend/app/lib/agent-chat.ts`
-- Gumroad license runtime and routes
-  - `apps/mathend/app/lib/gumroad-license.ts`
+- Lemon Squeezy license runtime and routes
+  - `apps/mathend/app/lib/lemonsqueezy-license.ts`
   - `apps/mathend/app/lib/license-session.ts`
   - `apps/mathend/app/lib/license-types.ts`
   - `apps/mathend/app/api/license/**/route.ts`

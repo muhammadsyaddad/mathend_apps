@@ -7,7 +7,7 @@ const buildLicensedStatusResponse = () => {
   return {
     configured: true,
     licensed: true,
-    checkoutUrl: "https://muhamsyad.gumroad.com/l/mathend",
+    checkoutUrl: "https://lemonsqueezy.com",
     productId: "mathend",
     buyerEmail: "tester@example.com",
     licenseKeyPreview: "ABCD...WXYZ",
@@ -85,7 +85,9 @@ describe("mathend home page", () => {
     render(<Home />);
 
     await screen.findByRole("button", { name: /new file/i });
-    await user.click(screen.getByRole("button", { name: /linear-algebra\.md/i }));
+    await user.click(
+      screen.getByRole("button", { name: /linear-algebra\.md/i }),
+    );
 
     expect(
       screen.getByDisplayValue(/A matrix can represent scaling/i),

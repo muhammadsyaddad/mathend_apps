@@ -9,7 +9,7 @@ describe("license-session", () => {
   const payload: LicenseSessionPayload = {
     version: 1,
     productId: "product_123",
-    checkoutUrl: "https://muhamsyad.gumroad.com/l/mathend",
+    checkoutUrl: "https://lemonsqueezy.com",
     licenseKey: "ABCD-EFGH-IJKL-MNOP",
     licenseKeyPreview: "ABCD...MNOP",
     buyerEmail: "buyer@example.com",

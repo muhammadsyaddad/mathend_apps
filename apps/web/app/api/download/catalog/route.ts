@@ -5,9 +5,9 @@ import {
   getDownloadRuntimeConfig,
 } from "../../../lib/download-runtime";
 import {
-  getGumroadRuntimeConfig,
-  verifyGumroadLicense,
-} from "../../../lib/gumroad-license";
+  getLemonSqueezyRuntimeConfig,
+  verifyLemonSqueezyLicense,
+} from "../../../lib/lemonsqueezy-license";
 import {
   getLicenseSessionSecret,
   parseSignedLicenseSession,
@@ -82,7 +82,7 @@ const unauthorized = (params: {
 };
 
 export async function GET(request: Request) {
-  const runtime = getGumroadRuntimeConfig();
+  const runtime = getLemonSqueezyRuntimeConfig();
   if (!runtime.enabled) {
     return NextResponse.json<DownloadCatalogResponse>(
       {
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         checkoutUrl: runtime.checkoutUrl,
         reason: "missing_product_id",
         error:
-          "Gumroad product is not configured. Set GUMROAD_PRODUCT_ID on the server.",
+          "Lemon Squeezy product is not configured. Set LEMONSQUEEZY_PRODUCT_ID on the server.",
       },
       { status: 500 },
     );
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
     Date.now() - lastVerifiedAtMs >= runtime.reverifyDays * DAY_MS;
 
   if (shouldReverify) {
-    const verification = await verifyGumroadLicense({
+    const verification = await verifyLemonSqueezyLicense({
       productId: runtime.productId,
       apiBase: runtime.apiBase,
       licenseKey: session.licenseKey,
@@ -164,7 +164,7 @@ export async function GET(request: Request) {
       }
 
       warningMessage =
-        "Gumroad re-verification is temporarily unavailable. Using cached license status.";
+        "Lemon Squeezy re-verification is temporarily unavailable. Using cached license status.";
     } else {
       effectiveSession = {
         ...session,
