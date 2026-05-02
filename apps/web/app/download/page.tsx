@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  type FormEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { LicenseStatusResponse } from "../lib/license-types";
 import styles from "./page.module.css";
@@ -57,19 +51,6 @@ const toLicenseStatus = (
   };
 };
 
-const formatDateTime = (value?: string): string => {
-  if (!value) {
-    return "-";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
-
-  return parsed.toLocaleString();
-};
-
 const formatExpiry = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -87,10 +68,6 @@ export default function DownloadPage() {
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
-  // Track whether the component has mounted on the client. We use this to
-  // avoid rendering attributes (like `disabled`) differently between the
-  // server and the client during hydration which causes React warnings.
-  const [isMounted, setIsMounted] = useState(false);
   const [licenseKeyInput, setLicenseKeyInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -168,12 +145,6 @@ export default function DownloadPage() {
     void loadLicenseStatus();
   }, [loadLicenseStatus]);
 
-  // mark mounted so we can safely toggle attributes that would otherwise
-  // mismatch between server and client-rendered HTML
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   const handleActivate = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -187,7 +158,7 @@ export default function DownloadPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            licenseKey: licenseKeyInput,
+            license_key: licenseKeyInput,
             email: emailInput,
           }),
         });
@@ -233,13 +204,6 @@ export default function DownloadPage() {
     }
   }, []);
 
-  const refreshButtonLabel = useMemo(() => {
-    if (isMounted && (isStatusLoading || isCatalogLoading)) {
-      return "Refreshing...";
-    }
-    return "Refresh";
-  }, [isCatalogLoading, isStatusLoading, isMounted]);
-
   const platformItems = catalogStatus?.platforms ?? [];
   const isLicensed = Boolean(licenseStatus?.licensed);
   const combinedError = formError ?? licenseStatus?.error ?? null;
@@ -250,202 +214,139 @@ export default function DownloadPage() {
         <header className={styles.topBar}>
           <p className={styles.brand}>mathend</p>
           <div className={styles.topLinks}>
-            <Link href="/">Back </Link>
-            <button
-              type="button"
-              onClick={() => void loadLicenseStatus()}
-              disabled={isMounted && (isStatusLoading || isCatalogLoading)}
-            >
-              {refreshButtonLabel}
-            </button>
+            <Link href="/">{"Back"}</Link>
           </div>
         </header>
 
-        <section className={styles.hero}>
-          <p className={styles.kicker}>desktop download gate</p>
-          <h1 className={styles.title}>
-            Download Mathend Desktop with license-gated access.
-          </h1>
-          <p className={styles.description}>
-            Strict gate is enabled: only valid Lemon Squeezy buyers can access
-            installer links. After install, the desktop app still asks for
-            activation again on first open.
-          </p>
-        </section>
-
-        <section className={styles.card} aria-live="polite">
-          <div className={styles.statusLine}>
-            <span
-              className={`${styles.statusPill} ${
-                isLicensed ? styles.statusOk : styles.statusWarn
-              }`}
-            >
-              {isLicensed ? "Licensed" : "Unlicensed"}
-            </span>
-            {/*<span className={styles.statusPill}>
-              {licenseStatus?.configured === false
-                ? "License API not configured"
-                : "License API ready"}
-            </span>*/}
-            {isCatalogLoading && (
-              <span className={styles.statusPill}>
-                Generating secure links...
-              </span>
-            )}
-          </div>
-
-          {combinedError && <p className={styles.error}>{combinedError}</p>}
-          {catalogStatus?.warning && (
-            <p className={styles.warning}>{catalogStatus.warning}</p>
-          )}
+        <main className={styles.main}>
+          <section className={styles.hero}>
+            <p className={styles.kicker}>download</p>
+            <h1 className={styles.headline}>Get Mathend Studio.</h1>
+            <p className={styles.subhead}>
+              One purchase, yours forever. No subscriptions.
+            </p>
+          </section>
 
           {!isLicensed && (
-            <>
-              <p className={styles.copy}>
-                You need a valid Lemon Squeezy license before download links are
-                generated.
-              </p>
+            <section className={styles.unlicensed}>
+              <div className={styles.unlicensedContent}>
+                <h2 className={styles.unlicensedTitle}>Activate license</h2>
+                <p className={styles.unlicensedText}>
+                  Enter your license key to unlock downloads. Or purchase a new
+                  license.
+                </p>
 
-              <div className={styles.actions}>
-                <a
-                  className={styles.button}
-                  href={checkoutUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Buy Mathend License
-                </a>
-                <button
-                  type="button"
-                  className={styles.buttonGhost}
-                  onClick={() => void loadLicenseStatus()}
-                  disabled={isStatusLoading}
-                >
-                  Check Session
-                </button>
-              </div>
+                {combinedError && (
+                  <p className={styles.error}>{combinedError}</p>
+                )}
 
-              <form className={styles.form} onSubmit={handleActivate}>
-                <label className={styles.field}>
-                  <span>License key</span>
-                  <input
-                    value={licenseKeyInput}
-                    onChange={(event) => setLicenseKeyInput(event.target.value)}
-                    placeholder="XXXX-XXXX-XXXX-XXXX"
-                    autoComplete="off"
-                  />
-                </label>
-
-                <label className={styles.field}>
-                  <span>Purchase email (optional)</span>
+                <form className={styles.form} onSubmit={handleActivate}>
+                  <div className={styles.formRow}>
+                    <input
+                      type="text"
+                      value={licenseKeyInput}
+                      onChange={(event) =>
+                        setLicenseKeyInput(event.target.value)
+                      }
+                      placeholder="XXXX-XXXX-XXXX-XXXX"
+                      className={styles.input}
+                      autoComplete="off"
+                    />
+                    <button
+                      type="submit"
+                      className={styles.button}
+                      disabled={isActivating || isStatusLoading}
+                    >
+                      {isActivating ? "Activating..." : "Activate"}
+                    </button>
+                  </div>
                   <input
                     type="email"
                     value={emailInput}
                     onChange={(event) => setEmailInput(event.target.value)}
-                    placeholder="you@example.com"
+                    placeholder="Purchase email (optional)"
+                    className={styles.input}
                     autoComplete="email"
                   />
-                </label>
+                </form>
 
-                <button
-                  type="submit"
-                  className={styles.button}
-                  disabled={isActivating || isStatusLoading}
-                >
-                  {isActivating
-                    ? "Activating..."
-                    : "Activate and Unlock Download"}
-                </button>
-              </form>
-            </>
+                <div className={styles.purchaseRow}>
+                  <a
+                    className={styles.purchaseLink}
+                    href={checkoutUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Buy new license
+                  </a>
+                </div>
+              </div>
+            </section>
           )}
 
           {isLicensed && (
-            <>
-              <p className={styles.copy}>
-                Secure installer links are short-lived. If they expire, click
-                refresh to mint new signed links.
-              </p>
-
-              <div className={styles.infoGrid}>
-                <article className={styles.infoCard}>
-                  <p className={styles.infoLabel}>Buyer</p>
-                  <p className={styles.infoValue}>
-                    {licenseStatus?.buyerEmail ?? "-"}
-                  </p>
-                </article>
-                <article className={styles.infoCard}>
-                  <p className={styles.infoLabel}>License key</p>
-                  <p className={styles.infoValue}>
-                    {licenseStatus?.licenseKeyPreview ?? "-"}
-                  </p>
-                </article>
-                <article className={styles.infoCard}>
-                  <p className={styles.infoLabel}>Last verified</p>
-                  <p className={styles.infoValue}>
-                    {formatDateTime(licenseStatus?.lastVerifiedAt)}
-                  </p>
-                </article>
+            <section className={styles.licensed}>
+              <div className={styles.licensedHeader}>
+                <span className={styles.statusBadge}>Activated</span>
+                <p className={styles.licensedEmail}>
+                  {licenseStatus?.buyerEmail}
+                </p>
               </div>
 
               {platformItems.length > 0 ? (
-                <div className={styles.downloadGrid}>
+                <div className={styles.downloadList}>
                   {platformItems.map((item) => (
-                    <article
-                      className={styles.downloadItem}
-                      key={item.platform}
-                    >
-                      <p className={styles.downloadLabel}>{item.label}</p>
-                      <p className={styles.downloadMeta}>{item.fileName}</p>
-                      <p className={styles.downloadMeta}>
-                        {formatExpiry(item.expiresAt)}
-                      </p>
+                    <div key={item.platform} className={styles.downloadRow}>
+                      <div className={styles.downloadInfo}>
+                        <p className={styles.downloadPlatform}>{item.label}</p>
+                        <p className={styles.downloadMeta}>
+                          {item.fileName} · {formatExpiry(item.expiresAt)}
+                        </p>
+                      </div>
                       <a
-                        className={styles.downloadButton}
+                        className={styles.downloadBtn}
                         href={item.downloadPath}
                       >
                         Download
                       </a>
-                    </article>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <p className={styles.hint}>
-                  No installer is available yet. Configure
-                  `WEB_DOWNLOAD_WINDOWS_URL`, `WEB_DOWNLOAD_MACOS_URL`, and
-                  `WEB_DOWNLOAD_LINUX_URL` on the deployed web app.
+                  No installers configured. Set WEB_DOWNLOAD_WINDOWS_URL,
+                  WEB_DOWNLOAD_MACOS_URL, and WEB_DOWNLOAD_LINUX_URL on the
+                  deployed server.
                 </p>
               )}
 
-              <div className={styles.actions}>
+              <div className={styles.licensedActions}>
                 <button
                   type="button"
-                  className={styles.buttonGhost}
+                  className={styles.actionBtn}
                   onClick={() => void loadCatalog()}
                   disabled={isCatalogLoading}
                 >
-                  {isCatalogLoading
-                    ? "Refreshing links..."
-                    : "Refresh secure links"}
+                  {isCatalogLoading ? "Refreshing..." : "Refresh links"}
                 </button>
                 <button
                   type="button"
-                  className={styles.buttonGhost}
+                  className={styles.actionBtn}
                   onClick={() => void handleDeactivate()}
                   disabled={isDeactivating}
                 >
-                  {isDeactivating ? "Clearing..." : "Clear session"}
+                  {isDeactivating ? "Clearing..." : "Sign out"}
                 </button>
               </div>
-
-              <p className={styles.hint}>
-                Note: desktop app still enforces in-app activation after install
-                as a second license gate.
-              </p>
-            </>
+            </section>
           )}
-        </section>
+        </main>
       </div>
+
+      <footer className={styles.footer}>
+        <p className={styles.footerBrand}>Mathend Studio</p>
+        <p className={styles.footerCopy}>&copy; 2026. Restrained simplicity.</p>
+      </footer>
     </div>
   );
 }
