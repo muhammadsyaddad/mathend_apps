@@ -4,27 +4,30 @@
   --sidebar-reveal-shift: calc(
     var(--sidebar-expanded-width) - var(--sidebar-collapsed-width)
   );
-  --bg-base: #050505;
+  --bg-base: #0a0a0a;
   --bg-grid: rgba(255, 255, 255, 0.035);
-  --bg-rail: #040404;
-  --bg-sidebar: #080808;
-  --bg-main: #070707;
-  --bg-elev-1: #111111;
-  --bg-elev-2: #161616;
-  --bg-elev-3: #1c1c1c;
-  --text-main: #f2f2f2;
-  --text-soft: #d0d0d0;
-  --text-muted: #8f8f8f;
-  --accent: #bdbdbd;
-  --accent-strong: #e0e0e0;
-  --danger: #f2777a;
-  --border: #2b2b2b;
-  --border-soft: #1f1f1f;
-  --shadow-lg: 0 22px 44px rgba(1, 3, 7, 0.55);
-  --shadow-md: 0 12px 24px rgba(1, 3, 7, 0.32);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --bg-rail: #0a0a0a;
+  --bg-sidebar: #0a0a0a;
+  --bg-main: #0a0a0a;
+  --bg-elev-1: #141414;
+  --bg-elev-2: #1c1c1c;
+  --bg-elev-3: #262626;
+  --text-main: #fafafa;
+  --text-soft: #a3a3a3;
+  --text-muted: #525252;
+  --accent: #e5e5e5;
+  --accent-strong: #fafafa;
+  --danger: #ef4444;
+  --border: #262626;
+  --border-soft: #262626;
+  --shadow-lg: 0 22px 44px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 24px rgba(0, 0, 0, 0.3);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --font-body: "Geist", "IBM Plex Sans", sans-serif;
+  --font-mono: "Geist Mono", "IBM Plex Mono", monospace;
+  --font-display: "Times New Roman", Times, serif;
 }
 
 * {
@@ -41,11 +44,8 @@ body {
 
 body {
   color: var(--text-main);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
-    var(--bg--base);
-  background-size: auto;
-  font-family: var(--font-body), "IBM Plex Sans", sans-serif;
+  background: var(--bg-base);
+  font-family: var(--font-body), "Geist", sans-serif;
 }
 
 ::selection {
@@ -64,6 +64,7 @@ a {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  background: #0a0a0a;
 }
 
 .sidebar-collapsed.library-app-shell {
@@ -111,15 +112,15 @@ a {
 }
 
 .library-sidebar {
-  background: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(5, 5, 5, 0.98));
-  border-right: 1px solid var(--border-soft);
+  background: #0a0a0a;
+  border-right: 1px solid #262626;
   display: flex;
   flex-direction: column;
   width: var(--sidebar-expanded-width);
   min-width: 0;
   z-index: 1;
   transform: translate3d(calc(-1 * var(--sidebar-reveal-shift)), 0, 0);
-  transition: transform 0.5s;
+  transition: transform 0.3s ease;
 }
 
 .sidebar-expanded .library-sidebar {
@@ -129,10 +130,10 @@ a {
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 0.6rem;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 1rem;
+  border-bottom: 1px solid #262626;
 }
 
 .icon-action {
@@ -143,41 +144,43 @@ a {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1px solid #262626;
   border-radius: var(--radius-sm);
-  background: rgba(15, 15, 15, 0.9);
-  color: var(--text-muted);
+  background: transparent;
+  color: #525252;
   cursor: pointer;
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 0.8rem;
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.7rem;
+  transition: all 0.2s;
 }
 
 .icon-action:hover {
-  color: var(--text-main);
-  border-color: #333333;
+  color: #a3a3a3;
+  border-color: #404040;
 }
 
 .new-note-button {
   flex: 1;
-  min-height: 2rem;
-  border: 1px solid #303030;
+  min-height: 2.35rem;
+  border: 1px solid rgba(244, 241, 235, 0.22);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-soft);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.02);
+  color: #f4f1eb;
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.69rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .new-note-button:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(244, 241, 235, 0.4);
 }
 
 .sidebar-content {
@@ -206,11 +209,11 @@ a {
   width: 100%;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  padding: 0.45rem 0.55rem;
+  padding: 0.6rem 0.75rem;
   background: transparent;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   transition:
     background-color 140ms ease,
     border-color 140ms ease;
@@ -224,13 +227,13 @@ a {
 }
 
 .note-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: #2c2c2c;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #262626;
 }
 
 .note-card-active {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.42);
+  background: #141414;
+  border-color: #262626;
 }
 
 .note-row {
@@ -251,9 +254,10 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.74rem;
   letter-spacing: 0.01em;
+  color: #fafafa;
 }
 
 .note-subrow {
@@ -266,8 +270,8 @@ a {
 
 .note-subtitle,
 .note-date {
-  color: var(--text-muted);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  color: #525252;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.62rem;
 }
 
@@ -281,9 +285,9 @@ a {
 .no-note-state {
   margin-top: 0.4rem;
   padding: 0.7rem;
-  border: 1px dashed #2c3548;
+  border: 1px dashed #262626;
   border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  color: #525252;
   font-size: 0.72rem;
 }
 
@@ -369,10 +373,8 @@ a {
   min-width: 0;
   height: 100vh;
   overflow: auto;
-  transition: transform 0.5s;
-  background:
-    linear-gradient(180deg, rgba(10, 10, 10, 0.98), rgba(7, 7, 7, 0.98)),
-    var(--bg-main);
+  transition: transform 0.3s ease;
+  background: #0a0a0a;
 }
 
 .sidebar-expanded .editor-canvas {
@@ -400,27 +402,29 @@ a {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: #525252;
   padding: 0.5rem 0.62rem;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   cursor: pointer;
   text-align: left;
+  transition: all 0.2s;
 }
 
 .editor-tab + .editor-tab {
-  border-left: 1px solid var(--border-soft);
+  border-left: 1px solid #262626;
 }
 
 .editor-tab:hover {
-  color: var(--text-soft);
-  background: rgba(30, 30, 30, 0.9);
+  color: #a3a3a3;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .editor-tab-active {
-  color: var(--text-main);
-  background: rgba(32, 32, 32, 0.58);
+  color: #fafafa;
+  background: #141414;
+  border-bottom: 1px solid #262626;
 }
 
 .editor-tab-name {
@@ -428,7 +432,7 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.72rem;
 }
 
@@ -455,7 +459,8 @@ a {
   justify-content: space-between;
   gap: 0.7rem;
   padding: 0.85rem 1.2rem;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid #262626;
+  background: #0a0a0a;
 }
 
 .editor-save-controls {
@@ -526,20 +531,19 @@ a {
   outline: 0;
   border-radius: var(--radius-sm);
   padding: 0.18rem 0.25rem;
-  color: var(--text-soft);
-  font-family: var(--font-display), "Space Grotesk", sans-serif;
+  color: #fafafa;
+  font-family: "Times New Roman", Times, serif;
   font-size: clamp(1.05rem, 1.6vw, 1.25rem);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .editor-title-editable:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .editor-title-editable:focus {
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .editor-body {
@@ -569,8 +573,8 @@ a {
   min-height: 100%;
   border: 0;
   background: transparent;
-  color: var(--text-main);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  color: #e5e5e5;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: clamp(0.92rem, 1.15vw, 1rem);
   line-height: 1.72;
   letter-spacing: 0.01em;
@@ -711,9 +715,9 @@ a {
   left: 0;
   width: min(22rem, calc(100vw - 3rem));
   max-height: min(26.5rem, calc(100vh - 1.5rem));
-  border: 1px solid #343434;
+  border: 1px solid #262626;
   border-radius: var(--radius-md);
-  background: rgba(20, 20, 20, 0.98);
+  background: #0a0a0a;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
@@ -756,25 +760,25 @@ a {
 }
 
 .palette-head {
-  border-bottom: 1px solid #2f2f2f;
+  border-bottom: 1px solid #262626;
   padding: 0.62rem 0.78rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.63rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
 .palette-head-title {
-  color: var(--accent-strong);
+  color: #fafafa;
 }
 
 .palette-head-category {
-  color: #cecece;
-  border: 1px solid #3a3a3a;
+  color: #a3a3a3;
+  border: 1px solid #262626;
   border-radius: 999px;
   padding: 0.14rem 0.45rem;
   font-size: 0.56rem;
@@ -797,8 +801,8 @@ a {
 .palette-group-label {
   margin-top: 0.34rem;
   margin-bottom: 0.08rem;
-  color: var(--text-muted);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  color: #525252;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.56rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -810,22 +814,24 @@ a {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text-soft);
+  color: #a3a3a3;
   padding: 0.45rem 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.65rem;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .palette-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #262626;
 }
 
 .palette-item-active {
-  background: rgba(255, 255, 255, 0.17);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #141414;
+  border-color: #404040;
 }
 
 .palette-item-left {
@@ -849,14 +855,14 @@ a {
   width: 2.05rem;
   height: 2.05rem;
   aspect-ratio: 1 / 1;
-  border: 1px solid #3a3a3a;
+  border: 1px solid #262626;
   border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text-main);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  color: #e5e5e5;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.8rem;
   line-height: 1.1;
   padding: 0.18rem;
@@ -866,12 +872,13 @@ a {
   overflow-wrap: anywhere;
   word-break: break-word;
   overflow: hidden;
-  background: rgba(14, 14, 14, 0.9);
+  background: #141414;
 }
 
 .palette-name {
-  font-family: var(--font-body), "IBM Plex Sans", sans-serif;
+  font-family: var(--font-body), "Geist", sans-serif;
   font-size: 0.82rem;
+  color: #fafafa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -888,11 +895,11 @@ a {
 }
 
 .palette-advanced-tag {
-  border: 1px solid #4f3a1c;
-  background: rgba(255, 204, 124, 0.12);
-  color: #ffd48f;
+  border: 1px solid #3d3020;
+  background: rgba(255, 200, 100, 0.08);
+  color: #d4a855;
   border-radius: 999px;
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.51rem;
   letter-spacing: 0.08em;
   padding: 0.1rem 0.35rem;
@@ -900,20 +907,20 @@ a {
 }
 
 .palette-shortcut {
-  color: var(--text-muted);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  color: #525252;
+  font-family: var(--font-mono), "Geist Mono", monospace;
   font-size: 0.64rem;
   white-space: nowrap;
 }
 
 .palette-empty {
-  color: var(--text-muted);
+  color: #525252;
   font-size: 0.74rem;
   padding: 0.6rem;
 }
 
 .palette-foot {
-  border-top: 1px solid #2f2f2f;
+  border-top: 1px solid #262626;
   padding: 0.56rem 0.8rem;
   display: flex;
   align-items: center;
