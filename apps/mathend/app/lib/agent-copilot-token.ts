@@ -9,7 +9,7 @@ type CopilotTokenExchangeResult = {
 };
 
 type CopilotTokenExchangeResponse = {
-  token?: unknown;
+  token?: string;
   expires_at?: unknown;
   refresh_in?: unknown;
 };

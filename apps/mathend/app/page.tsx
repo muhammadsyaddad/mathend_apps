@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  type CSSProperties,
   useCallback,
   useEffect,
   useMemo,
@@ -143,6 +144,64 @@ const getModifiedLabel = (timestamp: number): string => {
     month: "short",
     day: "numeric",
   });
+};
+
+const getPaletteGlyphStyle = (preview: string): CSSProperties => {
+  const trimmed = preview.trim();
+  if (!trimmed) return {};
+  const lines = trimmed.split("\n");
+  const maxLineLength = lines.reduce(
+    (max, line) => Math.max(max, line.replace(/\s+/g, "").length),
+    0,
+  );
+  const compactLength = trimmed.replace(/\s+/g, "").length;
+  const density = Math.max(maxLineLength, compactLength);
+  const hasSlash = /[\/\\]/.test(trimmed);
+  // Preset styles (checked in descending order)
+  const presets = [
+    {
+      threshold: 16,
+      fontSize: 0.48,
+      lineHeight: 0.92,
+      letterSpacing: "-0.03em",
+    },
+    {
+      threshold: 13,
+      fontSize: 0.52,
+      lineHeight: 0.95,
+      letterSpacing: "-0.02em",
+    },
+    { threshold: 10, fontSize: 0.56, lineHeight: 0.98 },
+    { threshold: 7, fontSize: 0.6, lineHeight: 1 },
+    { threshold: 5, fontSize: 0.64, lineHeight: 1.02 },
+    { threshold: 3, fontSize: 0.7, lineHeight: 1.05 },
+  ];
+  let fontSize = 0.8;
+  let lineHeight = 1.1;
+  let letterSpacing: string | undefined;
+  let fontWeight: CSSProperties["fontWeight"];
+  const preset = presets.find((p) => density > p.threshold);
+  if (preset) {
+    fontSize = preset.fontSize;
+    lineHeight = preset.lineHeight;
+    letterSpacing = preset.letterSpacing;
+  }
+  if (lines.length > 1) {
+    fontSize = Math.min(fontSize, 0.6);
+    lineHeight = Math.min(lineHeight, 0.98);
+  }
+  if (hasSlash && density > 3) {
+    fontSize = Math.min(fontSize, 0.6);
+  }
+  if (density > 6) {
+    fontWeight = 500;
+  }
+  // Final compacting step from the original logic
+  if (density > 3) {
+    fontSize *= 0.5;
+    letterSpacing = undefined;
+  }
+  return { fontSize: `${fontSize}rem`, lineHeight, letterSpacing, fontWeight };
 };
 
 const getCaretPositionInTextarea = (
@@ -1910,7 +1969,13 @@ export default function Home() {
                                   onClick={() => applyPaletteCommand(command)}
                                 >
                                   <div className="palette-item-left">
-                                    <div className="palette-glyph" aria-hidden>
+                                    <div
+                                      className="palette-glyph"
+                                      style={getPaletteGlyphStyle(
+                                        command.preview,
+                                      )}
+                                      aria-hidden
+                                    >
                                       {command.preview}
                                     </div>
                                     <div className="palette-item-meta">

@@ -848,6 +848,7 @@ a {
 .palette-glyph {
   width: 2.05rem;
   height: 2.05rem;
+  aspect-ratio: 1 / 1;
   border: 1px solid #3a3a3a;
   border-radius: var(--radius-sm);
   display: inline-flex;
@@ -858,7 +859,13 @@ a {
   font-family: var(--font-mono), "IBM Plex Mono", monospace;
   font-size: 0.8rem;
   line-height: 1.1;
+  padding: 0.18rem;
+  text-align: center;
+  letter-spacing: 0.01em;
   white-space: pre-line;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow: hidden;
   background: rgba(14, 14, 14, 0.9);
 }
 

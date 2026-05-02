@@ -841,16 +841,6 @@ export const MATH_COMMANDS: MathCommandItem[] = [
     level: "core",
   },
   {
-    id: "subset",
-    label: "Subset",
-    shortcut: "subset",
-    keywords: ["subset", "subhimpunan", "⊂", "⊆"],
-    preview: "A ⊆ B",
-    insertText: "A ⊆ B",
-    category: "logic-sets",
-    level: "core",
-  },
-  {
     id: "forall-exists",
     label: "Forall and Exists",
     shortcut: "quantifier",
