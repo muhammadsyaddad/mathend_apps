@@ -1314,146 +1314,226 @@ a {
 }
 
 .license-gate-shell {
-  width: 100%;
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 55%),
-    var(--bg-base);
+  flex-direction: column;
+  background: #0a0a0a;
+  color: #e5e5e5;
 }
 
-.license-gate-card {
-  width: min(28rem, 100%);
-  border: 1px solid #2f2f2f;
-  border-radius: var(--radius-lg);
-  background: rgba(13, 13, 13, 0.96);
-  box-shadow: var(--shadow-lg);
-  padding: 1rem;
+.license-gate-container {
+  width: min(1080px, 100% - 2rem);
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  min-height: 100vh;
 }
 
-.license-gate-kicker {
-  color: var(--text-muted);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.license-gate-title {
-  font-family: var(--font-display), "Space Grotesk", sans-serif;
-  font-size: 1.35rem;
-  font-weight: 500;
-}
-
-.license-gate-copy {
-  color: var(--text-soft);
-  font-size: 0.9rem;
-}
-
-.license-gate-actions {
+.license-gate-header {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.license-gate-buy,
-.license-gate-refresh,
-.license-gate-submit {
-  min-height: 2.3rem;
-  border: 1px solid #3b3b3b;
-  border-radius: var(--radius-sm);
-  color: var(--text-main);
+.license-gate-brand {
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #f4f1eb;
+}
+
+.license-gate-topLinks {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.license-gate-refreshBtn {
+  border: 1px solid rgba(244, 241, 235, 0.22);
+  background: rgba(255, 255, 255, 0.02);
+  color: #f4f1eb;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0.75rem;
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  min-height: 2.35rem;
+  padding: 0 0.9rem;
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.69rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.license-gate-buy {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.license-gate-buy:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-.license-gate-refresh,
-.license-gate-submit {
-  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.license-gate-refresh:hover,
-.license-gate-submit:hover {
-  background: rgba(255, 255, 255, 0.17);
+.license-gate-refreshBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.license-gate-refresh:disabled,
-.license-gate-submit:disabled {
-  opacity: 0.62;
+.license-gate-refreshBtn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.license-gate-content {
+  flex: 1;
+}
+
+.license-gate-hero {
+  padding: 6rem 4rem 4rem;
+  border-bottom: 1px solid #262626;
+  text-align: center;
+}
+
+.license-gate-kicker {
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #525252;
+  margin-bottom: 1rem;
+}
+
+.license-gate-title {
+  font-family: "Times New Roman", Times, serif;
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+  color: #fafafa;
+}
+
+.license-gate-subhead {
+  font-family: var(--font-body), "Geist", sans-serif;
+  font-size: 1.2rem;
+  color: #a3a3a3;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.license-gate-formSection {
+  padding: 4rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.license-gate-formCard {
+  border: 1px solid #262626;
+  padding: 2rem;
+}
+
+.license-gate-error {
+  font-family: var(--font-body), "Geist", sans-serif;
+  font-size: 0.85rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .license-gate-form {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
-.license-gate-field {
+.license-gate-formRow {
   display: flex;
-  flex-direction: column;
-  gap: 0.24rem;
+  gap: 0.75rem;
 }
 
-.license-gate-field span {
-  color: var(--text-muted);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.license-gate-field input {
-  width: 100%;
-  min-height: 2.3rem;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  background: rgba(10, 10, 10, 0.85);
-  color: var(--text-main);
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 0.78rem;
-  padding: 0 0.62rem;
-}
-
-.license-gate-field input:focus {
+.license-gate-input {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  background: #141414;
+  border: 1px solid #262626;
+  color: #e5e5e5;
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.9rem;
   outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
+  transition: border-color 0.2s;
 }
 
-.license-gate-error {
-  border: 1px solid rgba(242, 119, 122, 0.42);
-  border-radius: 8px;
-  color: #ffc3c5;
-  background: rgba(72, 21, 23, 0.55);
-  font-size: 0.78rem;
-  line-height: 1.45;
-  padding: 0.5rem 0.62rem;
+.license-gate-input::placeholder {
+  color: #525252;
 }
 
-.license-gate-hint {
-  color: var(--text-muted);
-  font-size: 0.74rem;
+.license-gate-input:focus {
+  border-color: #404040;
+}
+
+.license-gate-submit {
+  padding: 0.875rem 1.5rem;
+  background: #fafafa;
+  color: #0a0a0a;
+  border: 1px solid #fafafa;
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.license-gate-submit:hover {
+  background: transparent;
+  color: #fafafa;
+}
+
+.license-gate-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.license-gate-purchaseRow {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #262626;
+}
+
+.license-gate-purchaseLink {
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #a3a3a3;
+  text-decoration: none;
+}
+
+.license-gate-purchaseLink:hover {
+  color: #fafafa;
+  text-decoration: underline;
+}
+
+.license-gate-footer {
+  padding: 2rem 4rem;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono), "Geist Mono", monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #525252;
+  border-top: 1px solid #262626;
+}
+
+@media (max-width: 768px) {
+  .license-gate-hero,
+  .license-gate-formSection,
+  .license-gate-footer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .license-gate-formRow {
+    flex-direction: column;
+  }
 }
 
 .agent-panel {

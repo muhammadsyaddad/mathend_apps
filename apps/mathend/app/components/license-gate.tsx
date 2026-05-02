@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useCallback, useState } from "react";
 import type { LicenseStatusResponse } from "../lib/license-types";
 
 type LicenseGateProps = {
@@ -22,87 +22,101 @@ export default function LicenseGate({
 }: LicenseGateProps) {
   const [licenseKey, setLicenseKey] = useState("");
   const [email, setEmail] = useState("");
-  const [hasHydrated, setHasHydrated] = useState(false);
   const checkoutUrl = status?.checkoutUrl?.trim() || "https://lemonsqueezy.com";
-  const controlsDisabled = hasHydrated ? isLoading || isActivating : false;
+  const controlsDisabled = isLoading || isActivating;
 
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void onActivate({ licenseKey, email });
+    },
+    [licenseKey, email, onActivate],
+  );
 
   return (
     <main className="license-gate-shell">
-      <section className="license-gate-card" aria-live="polite">
-        <p className="license-gate-kicker">Mathend License</p>
-        <h1 className="license-gate-title">Activate your lifetime access</h1>
-        <p className="license-gate-copy">
-          Mathend uses Lemon Squeezy license verification before opening the
-          workspace.
-        </p>
+      <div className="license-gate-container">
+        <header className="license-gate-header">
+          <p className="license-gate-brand">mathend</p>
+          <div className="license-gate-topLinks">
+            <button
+              type="button"
+              className="license-gate-refreshBtn"
+              onClick={() => void onRefresh()}
+              disabled={controlsDisabled}
+            >
+              {isLoading ? "Checking..." : "Refresh"}
+            </button>
+          </div>
+        </header>
 
-        <div className="license-gate-actions">
-          <a
-            className="license-gate-buy"
-            href={checkoutUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Buy Mathend License
-          </a>
-          <button
-            type="button"
-            className="license-gate-refresh"
-            onClick={() => void onRefresh()}
-            disabled={controlsDisabled}
-          >
-            Refresh Status
-          </button>
+        <div className="license-gate-content" aria-live="polite">
+          <section className="license-gate-hero">
+            <p className="license-gate-kicker">activation</p>
+            <h1 className="license-gate-title">Unlock Mathend Studio.</h1>
+            <p className="license-gate-subhead">
+              Enter your license key to access the workspace. Or purchase a new
+              license.
+            </p>
+          </section>
+
+          <section className="license-gate-formSection">
+            <div className="license-gate-formCard">
+              {(status?.error || activateError) && (
+                <p className="license-gate-error">
+                  {status?.error || activateError}
+                </p>
+              )}
+
+              <form className="license-gate-form" onSubmit={handleSubmit}>
+                <div className="license-gate-formRow">
+                  <input
+                    type="text"
+                    value={licenseKey}
+                    onChange={(event) => setLicenseKey(event.target.value)}
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    className="license-gate-input"
+                    autoComplete="off"
+                  />
+                  <button
+                    type="submit"
+                    className="license-gate-submit"
+                    disabled={controlsDisabled}
+                  >
+                    {isActivating ? "Activating..." : "Activate"}
+                  </button>
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="Purchase email (optional)"
+                  className="license-gate-input"
+                  autoComplete="email"
+                />
+              </form>
+
+              <div className="license-gate-purchaseRow">
+                <a
+                  className="license-gate-purchaseLink"
+                  href={checkoutUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Buy new license
+                </a>
+              </div>
+            </div>
+          </section>
         </div>
 
-        <form
-          className="license-gate-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void onActivate({ licenseKey, email });
-          }}
-        >
-          <label className="license-gate-field">
-            <span>License key</span>
-            <input
-              value={licenseKey}
-              onChange={(event) => setLicenseKey(event.target.value)}
-              placeholder="XXXX-XXXX-XXXX-XXXX"
-              autoComplete="off"
-            />
-          </label>
-
-          <label className="license-gate-field">
-            <span>Purchase email (optional)</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="license-gate-submit"
-            disabled={controlsDisabled}
-          >
-            {isActivating ? "Activating..." : "Activate License"}
-          </button>
-        </form>
-
-        {status?.error && <p className="license-gate-error">{status.error}</p>}
-        {activateError && <p className="license-gate-error">{activateError}</p>}
-
-        {status?.reason && !status.licensed && (
-          <p className="license-gate-hint">Status: {status.reason}</p>
-        )}
-      </section>
+        <footer className="license-gate-footer">
+          <p className="license-gate-footerBrand">Mathend Studio</p>
+          <p className="license-gate-footerCopy">
+            &copy; 2026. Restrained simplicity.
+          </p>
+        </footer>
+      </div>
     </main>
   );
 }
